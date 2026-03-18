@@ -1,0 +1,508 @@
+{
+  "name": "Lead Instantly To Airtable",
+  "nodes": [
+    {
+      "parameters": {
+        "resource": "unibox",
+        "operation": "get",
+        "messageId": "={{ $json.Leads }}"
+      },
+      "type": "n8n-nodes-instantly.instantly",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        -16
+      ],
+      "id": "d2251c64-05e2-4ac3-b07f-2b8288dae484",
+      "name": "Get unibox message",
+      "credentials": {
+        "instantlyApi": {
+          "id": "Q2DD1lge7EyG11uK",
+          "name": "Instantly account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "unibox",
+        "limit": 10
+      },
+      "type": "n8n-nodes-instantly.instantly",
+      "typeVersion": 1,
+      "position": [
+        176,
+        -16
+      ],
+      "id": "e6abc475-719c-4faa-b085-ec47ec61faa0",
+      "name": "Get many unibox messages",
+      "credentials": {
+        "instantlyApi": {
+          "id": "Q2DD1lge7EyG11uK",
+          "name": "Instantly account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 2,
+      "position": [
+        16,
+        -16
+      ],
+      "id": "25d9f3e7-20b4-4a0e-89ca-1aba0d25cbf5",
+      "name": "Date & Time"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b1c67762-6cbc-41b5-b981-653e6dc4e912",
+              "name": "Lead 1",
+              "value": "={{ $json.items[0].id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        368,
+        -352
+      ],
+      "id": "93e48554-438a-449a-a2ac-a1296260c22a",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 22
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -160,
+        -16
+      ],
+      "id": "3924d445-00f3-4985-9474-68c4a1a069aa",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b1c67762-6cbc-41b5-b981-653e6dc4e912",
+              "name": "Lead 1",
+              "value": "={{ $json.items[1].id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        368,
+        -192
+      ],
+      "id": "7355fc93-10e1-4db5-a435-d72ee577109a",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1pQ3t2jjHmqtuzLoC8tv-WFBIn1x78yTJKxFFPxRgtxs",
+          "mode": "list",
+          "cachedResultName": "master_dataset",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1pQ3t2jjHmqtuzLoC8tv-WFBIn1x78yTJKxFFPxRgtxs/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 852697557,
+          "mode": "list",
+          "cachedResultName": "dataset_emails.csv",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1pQ3t2jjHmqtuzLoC8tv-WFBIn1x78yTJKxFFPxRgtxs/edit#gid=852697557"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "email": "={{ $json.from_address_json[0].address }}",
+            "Status": "Replied",
+            "Last Contact": "={{ $json.timestamp_created }}"
+          },
+          "matchingColumns": [
+            "email"
+          ],
+          "schema": [
+            {
+              "id": "titulo",
+              "displayName": "titulo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "website",
+              "displayName": "website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "telefono",
+              "displayName": "telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ubicacion",
+              "displayName": "ubicacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Contact",
+              "displayName": "Last Contact",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1216,
+        -16
+      ],
+      "id": "c8ab2619-d300-4a5f-af89-4822f21ee52c",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xZrJNQBTNR10CH8E",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b1c67762-6cbc-41b5-b981-653e6dc4e912",
+              "name": "Lead 1",
+              "value": "={{ $json.items[2].id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        384,
+        -16
+      ],
+      "id": "c3ff60a4-f463-4080-953f-676dd7ec09c4",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b1c67762-6cbc-41b5-b981-653e6dc4e912",
+              "name": "Lead 1",
+              "value": "={{ $json.items[3].id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        384,
+        144
+      ],
+      "id": "852fce26-d65f-466d-aae1-93e866883276",
+      "name": "Edit Fields3"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b1c67762-6cbc-41b5-b981-653e6dc4e912",
+              "name": "Lead 1",
+              "value": "={{ $json.items[4].id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        384,
+        304
+      ],
+      "id": "9ce3866c-df9d-41ed-bb5f-5c65164d3259",
+      "name": "Edit Fields4"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor (const item of $input.all()) {\n  item.json.myNewField = 1;\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        -16
+      ],
+      "id": "39b17841-dfe7-4790-92b0-710cac873e82",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "17c7158b-50e6-4349-ae8d-f3e4946c53c0",
+              "name": "Leads",
+              "value": "={{ $json['Lead 1'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        864,
+        -16
+      ],
+      "id": "521b8bc6-a086-4c0f-83a8-295eb8c5dcad",
+      "name": "Edit Fields5"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get many unibox messages": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields3",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Date & Time": {
+      "main": [
+        [
+          {
+            "node": "Get many unibox messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get unibox message": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Date & Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields3": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields4": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields5": {
+      "main": [
+        [
+          {
+            "node": "Get unibox message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "1cc772cb-dadf-4275-a4fd-f1937a6fe46e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0f2b7acf1a4c6b0ee0cc3c6681475c3188c6e94dc05c18b6edd0443ba38705aa"
+  },
+  "id": "pX4OBDqrgk2gLn3l",
+  "tags": []
+}

@@ -1,0 +1,5065 @@
+{
+  "name": "Flujo Principal",
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "9e9b3e3d-d3bb-4237-b727-4dc0e508f3ad",
+              "leftValue": "={{ $('Datos Estandar').item.json['Validacion IA - Agente'] }}",
+              "rightValue": "=1",
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -960,
+        1584
+      ],
+      "id": "969d89fd-3472-45d5-a9a5-0ec73af83110",
+      "name": "Validacion por IA"
+    },
+    {
+      "parameters": {
+        "duplicateItem": true,
+        "duplicateCount": 1,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e9f70c8f-bf9a-46e3-8e90-b1bb207ff858",
+              "name": "Mensaje Tecnico",
+              "value": "={{ $json.data.Respuesta }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1472,
+        2064
+      ],
+      "id": "1244911d-1699-43f4-b8ce-b208dd95fe36",
+      "name": "Edit Fields4"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "15b0dc8f-e940-4d08-b49f-24e57a3e3ff8",
+              "leftValue": "={{ $('Edit Fields4').item.json['Mensaje Tecnico'] }}",
+              "rightValue": "Si",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1264,
+        2064
+      ],
+      "id": "7f67e621-23af-40fd-96e7-185df222b4d3",
+      "name": "Se puede trabajar en la actividad?"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "={{ $json.execution_info.inventories[0] }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -3648,
+        2080
+      ],
+      "id": "d14d707d-3e96-4203-b733-50a69c2d722e",
+      "name": "Aggregate2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f4c6e7b8-c3e0-4bfb-9955-79ffd5eaa9ff",
+              "name": "Equipos",
+              "value": "={{ $json['[object Object]'][0] }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -3360,
+        2080
+      ],
+      "id": "b8911036-b428-4bd6-bb1a-29dabc972bf7",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -4560,
+        2080
+      ],
+      "id": "7d69f059-08d6-4739-9e0a-c9d9e868a151",
+      "name": "Wait",
+      "webhookId": "4989296d-3675-457d-bf82-95afb749dead"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://stg.saiv3api.imagendinamica.mx/api/login",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "email",
+              "value": "ext-n8n1@imagendinamica.com"
+            },
+            {
+              "name": "password",
+              "value": "@7q7dU5(\"bH1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -4240,
+        2080
+      ],
+      "id": "9d2cab46-ef4c-47c0-ab19-3d8fbf1357c1",
+      "name": "SAI Autenticacion",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "666e1982-6f25-42d7-bcd3-11557d5fefb1",
+              "name": "Numero de orden",
+              "value": "={{ $('SAI Obtener Ordenes Principal').item.json.execution_info.so_id }}",
+              "type": "number"
+            },
+            {
+              "id": "8602fdd7-6302-4e36-a1d9-fc301917783a",
+              "name": "Descripcion de Actividad:",
+              "value": "={{ $('SAI Obtener Ordenes Principal').item.json.execution_info.inventories[0].services[0].activities[0].evidences[0].act_evid_desc }}",
+              "type": "string"
+            },
+            {
+              "id": "d0a92695-8b7c-4a51-8a19-b7b8c9a2af52",
+              "name": "Validacion - Evidencia:  ",
+              "value": "={{ $('Edit Fields2').item.json.Equipos.execution_info.inventories[0].services[0].activities[0].evidences[0].validation_text }}",
+              "type": "string"
+            },
+            {
+              "id": "7ad74d65-7d59-49d7-af55-45eb742ccc41",
+              "name": "Tipo de Actividad:",
+              "value": "={{ $('Edit Fields2').item.json.Equipos.execution_info.inventories[0].services[0].activities[0].act_scope }}",
+              "type": "string"
+            },
+            {
+              "id": "a2717ee4-f101-4853-8883-63cf93f8e678",
+              "name": "Validacion IA - Agente",
+              "value": "={{ $('Edit Fields2').item.json.Equipos.execution_info.inventories[0].services[0].activities[0].evidences[0].act_evid_validated_by_ai }}",
+              "type": "number"
+            },
+            {
+              "id": "07dd46fe-71fa-4d08-b679-5345afeaac19",
+              "name": "Formato de evidencia:",
+              "value": "={{ $('Edit Fields2').item.json.Equipos.execution_info.inventories[0].services[0].activities[0].evidences[0].act_evid_type }}",
+              "type": "string"
+            },
+            {
+              "id": "697112e4-9dd0-4e28-a1da-5f5f50ebafbc",
+              "name": "Nombre Responsable:",
+              "value": "={{ $('Edit Fields2').item.json.Equipos.execution_info.inventories[0].services[0].activities[0].responsible_names }}",
+              "type": "string"
+            },
+            {
+              "id": "7c17240b-a687-44eb-9ed8-2dc8dd5cbb2c",
+              "name": "Teléfono:",
+              "value": "={{ $('Edit Fields2').item.json.Equipos.execution_info.inventories[0].services[0].activities[0].responsible_phone }}",
+              "type": "string"
+            },
+            {
+              "id": "2281de1e-b044-4c3e-af5a-378623447f02",
+              "name": "Email",
+              "value": "={{ $('Edit Fields2').item.json.Equipos.execution_info.inventories[0].services[0].activities[0].responsible_email }}",
+              "type": "string"
+            },
+            {
+              "id": "9d5133f1-5979-4fbc-be03-9f3b1dd931f3",
+              "name": "Rol:",
+              "value": "={{ $('Edit Fields2').item.json.Equipos.execution_info.inventories[0].services[0].activities[0].role_desc }}",
+              "type": "string"
+            },
+            {
+              "id": "db50bcc3-f6b5-4b1c-bd8b-be7311c720d4",
+              "name": "Nombre Agente",
+              "value": "={{ $('Edit Fields2').item.json.Equipos.execution_info.agent_names }} {{ $('Edit Fields2').item.json.Equipos.execution_info.agent_lastnames }}",
+              "type": "string"
+            },
+            {
+              "id": "2d869ed8-d13a-4263-bba5-eb5fa14860ea",
+              "name": "Teléfono Agente",
+              "value": "={{ $('Edit Fields2').item.json.Equipos.execution_info.agent_phone }}",
+              "type": "string"
+            },
+            {
+              "id": "bc7c2650-c37e-4b98-b9da-7a6a4a9d7a1b",
+              "name": "Email Agente",
+              "value": "={{ $('Edit Fields2').item.json.Equipos.execution_info.agent_email }}",
+              "type": "string"
+            },
+            {
+              "id": "b9053c35-ce90-40de-8699-a64eb5bc0e9f",
+              "name": "Descripción de Actividad",
+              "value": "={{ $('Edit Fields2').item.json.Equipos.execution_info.inventories[0].services[0].activities[0].activity_desc }}",
+              "type": "string"
+            },
+            {
+              "id": "31b0760e-80fb-4da0-863c-eed1cbc58b4f",
+              "name": "Serial Number",
+              "value": "={{ $json.Equipos.execution_info.inventories[0].serialnumber }}",
+              "type": "string"
+            },
+            {
+              "id": "7c5e9495-c84c-4c84-b523-05189b60cced",
+              "name": "inv_id",
+              "value": "={{ $('SAI Obtener Ordenes Principal').item.json.execution_info.inventories[0].inv_id }}",
+              "type": "number"
+            },
+            {
+              "id": "a45a3d15-68c5-4fe5-9f11-f82c8886a570",
+              "name": "service_id",
+              "value": "={{ $('SAI Obtener Ordenes Principal').item.json.execution_info.inventories[0].services[0].service_id }}",
+              "type": "number"
+            },
+            {
+              "id": "858abd03-4393-4f8a-b844-e121a3f5320a",
+              "name": "activity_id",
+              "value": "={{ $('SAI Obtener Ordenes Principal').item.json.execution_info.inventories[0].services[0].activities[0].activity_id }}",
+              "type": "number"
+            },
+            {
+              "id": "5b481bcf-f076-41a3-9a6d-3f794cc1f1e3",
+              "name": "act_evid_id",
+              "value": "={{ $('SAI Obtener Ordenes Principal').item.json.execution_info.inventories[0].services[0].activities[0].evidences[0].act_evid_id }}",
+              "type": "number"
+            },
+            {
+              "id": "480bd61a-2637-4c24-a12e-00a9a385e70a",
+              "name": "act_evid_status",
+              "value": "={{ $('SAI Obtener Ordenes Principal').item.json.execution_info.inventories[0].services[0].activities[0].evidences[0].act_evid_status }}",
+              "type": "string"
+            },
+            {
+              "id": "53536421-29f3-4ba9-b4dd-de61ca09e665",
+              "name": "FSM_workorder_id",
+              "value": "={{ $('SAI Obtener Ordenes Principal').item.json.execution_info.inventories[0].FSM_workorder_id }}",
+              "type": "string"
+            },
+            {
+              "id": "64ae5095-f4f6-4aa4-a09b-65515fa1762f",
+              "name": "FSM_fileID_text",
+              "value": "={{ $json.Equipos.execution_info.inventories[0].services[0].activities[0].evidences[0].FSM_fileID_text }}",
+              "type": "string"
+            },
+            {
+              "id": "dd70548c-8a9e-4205-8255-d9ce0b100604",
+              "name": "FSM_job_sheet_id",
+              "value": "={{ $json.Equipos.execution_info.inventories[0].services[0].activities[0].evidences[0].FSM_job_sheet_id }}",
+              "type": "string"
+            },
+            {
+              "id": "0147faed-75e4-4343-8d91-4ca630d07123",
+              "name": "FSM_workorder_id",
+              "value": "={{ $json.Equipos.execution_info.inventories[0].FSM_workorder_id }}",
+              "type": "string"
+            },
+            {
+              "id": "8c629f19-97d2-4c0e-8ef6-2038d61c00c8",
+              "name": "FSM_service_id",
+              "value": "={{ $json.Equipos.execution_info.inventories[0].services[0].activities[0].FSM_service_id }}",
+              "type": "string"
+            },
+            {
+              "id": "9a9cb9d4-43a2-46b1-8108-8709c97d78be",
+              "name": "FSM_field_api_name",
+              "value": "={{ $json.Equipos.execution_info.inventories[0].services[0].activities[0].evidences[0].FSM_field_api_name }}",
+              "type": "string"
+            },
+            {
+              "id": "68932954-ce5d-4323-8010-a09543586a55",
+              "name": "FSM_wotype_id",
+              "value": "={{ $json.Equipos.execution_info.FSM_wotype_id }}",
+              "type": "string"
+            },
+            {
+              "id": "a0cf7996-5aa7-4c7c-8c58-b8acb1de9cba",
+              "name": "Actividad por realizar",
+              "value": "={{ $('SAI Obtener Ordenes Principal').item.json.finished }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -3120,
+        2080
+      ],
+      "id": "064fbce9-0869-42db-9f18-eb589b658b40",
+      "name": "Datos Estandar"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://stg.saiv3api.imagendinamica.mx/api/login",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "email",
+              "value": "ext-n8n1@imagendinamica.com"
+            },
+            {
+              "name": "password",
+              "value": "@7q7dU5(\"bH1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -352,
+        2208
+      ],
+      "id": "8239e430-b1da-43a4-97ab-db5ad8918235",
+      "name": "SAI Autenticacion3"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://stg.saiv3api.imagendinamica.mx/api/login",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "email",
+              "value": "ext-n8n1@imagendinamica.com"
+            },
+            {
+              "name": "password",
+              "value": "@7q7dU5(\"bH1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1264,
+        176
+      ],
+      "id": "28870c15-0ddc-49a1-8acd-c706ec09f4d7",
+      "name": "SAI Autenticacion5"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://stg.saiv3api.imagendinamica.mx/api/serviceorders/{{ $('Datos Estandar').item.json['Numero de orden'] }}/updatemonitorevidence",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer  {{ $('SAI Autenticacion3').item.json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "inv_id",
+              "value": "={{ $('Datos Estandar').item.json.inv_id }}"
+            },
+            {
+              "name": "service_id",
+              "value": "={{ $('Datos Estandar').item.json.service_id }}"
+            },
+            {
+              "name": "act_evid_status",
+              "value": "={{ $('Razon de NO proceder').item.json.data['Razon de no proceder con la actividad'] }}"
+            },
+            {
+              "name": "act_evid_id",
+              "value": "={{ $('Datos Estandar').item.json.act_evid_id }}"
+            },
+            {
+              "name": "activity_id",
+              "value": "={{ $('Datos Estandar').item.json.activity_id }}"
+            },
+            {
+              "name": "comment",
+              "value": "={{ $('Razon de NO proceder').item.json.data.Motivo }}"
+            },
+            {
+              "name": "=FSM_fileID_text",
+              "value": "={{ $('Razon de NO proceder').item.json.data.Motivo }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -80,
+        2208
+      ],
+      "id": "6364339d-4f86-4f41-8795-79f0ca80114d",
+      "name": "SAI Registro de actividades"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8ad3742a-1572-404d-ae93-9b1be3006a37",
+              "leftValue": "={{ $json['Actividad por realizar'] }}",
+              "rightValue": "false",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2880,
+        2080
+      ],
+      "id": "b445925a-35c1-4b7b-ad68-6532e3c0e970",
+      "name": "Hay Actividad por realizar?",
+      "retryOnFail": false,
+      "alwaysOutputData": false,
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://stg.saiv3api.imagendinamica.mx/api/serviceorders/{{ $('Datos Estandar').item.json['Numero de orden'] }}/updatemonitorevidence",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer  {{ $('SAI Autenticacion5').item.json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "inv_id",
+              "value": "={{ $('Datos Estandar').item.json.inv_id }}"
+            },
+            {
+              "name": "service_id",
+              "value": "={{ $('Datos Estandar').item.json.service_id }}"
+            },
+            {
+              "name": "act_evid_status",
+              "value": "={{ $('Status Validacion IA').item.json['Status Validado'] }}"
+            },
+            {
+              "name": "act_evid_id",
+              "value": "={{ $('Datos Estandar').item.json.act_evid_id }}"
+            },
+            {
+              "name": "activity_id",
+              "value": "={{ $('Datos Estandar').item.json.activity_id }}"
+            },
+            {
+              "name": "=FSM_fileID_text",
+              "value": "={{ $('Evidencia Zoho IMG').item.json.data[1].data.file_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1472,
+        176
+      ],
+      "id": "704ed947-c4b9-44ab-b165-f617f0d27156",
+      "name": "SAI Registro de actividades1"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "body"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -6480,
+        2464
+      ],
+      "id": "4881b508-a5d4-45d8-a54f-cfd452cf4f32",
+      "name": "Aggregate1",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b0c45e55-8610-491a-b7e0-e74b2efea485",
+              "name": "Status Validado",
+              "value": "=F",
+              "type": "string"
+            },
+            {
+              "id": "f6e75549-c45a-4ad4-8feb-85b0bd74512f",
+              "name": "data.file_id",
+              "value": "={{ $('Evidencia Zoho IMG').item.json.data.File_Name }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1040,
+        176
+      ],
+      "id": "fbc24c6f-fa74-4826-848c-638df3899561",
+      "name": "Status Validacion IA"
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "phoneNumberId": "922902700900527",
+        "recipientPhoneNumber": "={{ $('Datos Estandar').item.json['Teléfono:'] }}",
+        "message": "=No fue posible validar la evidencia. Mande nueva evidencia.\nManda la validacion de: {{ $('Datos Estandar').item.json['Descripcion de Actividad:'] }}\nEvidencia: {{ $('Datos Estandar').item.json['Validacion - Evidencia:  '] }}",
+        "responseType": "customForm",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Inserta evidencia",
+              "fieldType": "file"
+            }
+          ]
+        },
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "resumeAmount": 180,
+              "resumeUnit": "minutes"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        320,
+        656
+      ],
+      "id": "a1dfea54-982c-452f-9456-d3cdd1a00f2e",
+      "name": "Mensaje con descripcion de actividad y solicitud de evidencia al tecnico1",
+      "webhookId": "2301f148-c379-46eb-8b84-7959485fa9ea"
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "phoneNumberId": "922902700900527",
+        "recipientPhoneNumber": "={{ $('Datos Estandar').item.json['Teléfono:'] }}",
+        "message": "=Manda la validacion de: {{ $('Datos Estandar').item.json['Descripcion de Actividad:'] }}\nEvidencia: {{ $('Datos Estandar').item.json['Validacion - Evidencia:  '] }}",
+        "responseType": "customForm",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Inserta evidencia",
+              "fieldType": "file",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "resumeAmount": 180,
+              "resumeUnit": "minutes"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        -400,
+        1616
+      ],
+      "id": "5760cb10-f7b8-4a43-a1a5-341433731958",
+      "name": "Mensaje con descripcion de actividad y solicitud de evidencia al tecnico2",
+      "webhookId": "2301f148-c379-46eb-8b84-7959485fa9ea"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://stg.saiv3api.imagendinamica.mx/api/login",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "email",
+              "value": "ext-n8n1@imagendinamica.com"
+            },
+            {
+              "name": "password",
+              "value": "@7q7dU5(\"bH1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1712,
+        1680
+      ],
+      "id": "5524403a-8803-4d89-a8c1-142c94c228a9",
+      "name": "SAI Autenticacion6"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://stg.saiv3api.imagendinamica.mx/api/serviceorders/{{ $('Datos Estandar').item.json['Numero de orden'] }}/updatemonitorevidence",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer  {{ $('SAI Autenticacion6').item.json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "inv_id",
+              "value": "={{ $('Datos Estandar').item.json.inv_id }}"
+            },
+            {
+              "name": "service_id",
+              "value": "={{ $('Datos Estandar').item.json.service_id }}"
+            },
+            {
+              "name": "act_evid_status",
+              "value": "={{ $('Status Validacion Cap').item.json['Status Validado'] }}"
+            },
+            {
+              "name": "act_evid_id",
+              "value": "={{ $('Datos Estandar').item.json.act_evid_id }}"
+            },
+            {
+              "name": "activity_id",
+              "value": "={{ $('Datos Estandar').item.json.activity_id }}"
+            },
+            {
+              "name": "FSM_fileID_text",
+              "value": "={{ $('Evidencia Zoho IMG1').item.json.data[1].data.file_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1952,
+        1680
+      ],
+      "id": "cf646ea1-8467-4963-8432-e7bdaccc11e9",
+      "name": "SAI Registro de actividades2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b0c45e55-8610-491a-b7e0-e74b2efea485",
+              "name": "Status Validado",
+              "value": "=F",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1504,
+        1680
+      ],
+      "id": "afa679d8-7dfe-4661-abe5-7d4185ce653f",
+      "name": "Status Validacion Cap"
+    },
+    {
+      "parameters": {
+        "resource": "media",
+        "phoneNumberId": "922902700900527",
+        "mediaPropertyName": "Inserta_evidencia",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        -208,
+        1616
+      ],
+      "id": "fc6e0d55-66aa-4fac-8cc7-d27873c79d0f",
+      "name": "Upload media",
+      "webhookId": "ec2b57ef-36ee-4567-b47b-58a226c1d99a"
+    },
+    {
+      "parameters": {
+        "resource": "media",
+        "operation": "mediaUrlGet",
+        "mediaGetId": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        -16,
+        1616
+      ],
+      "id": "af5e1049-4bc6-4e0c-96b2-49734df213e5",
+      "name": "Download media1",
+      "webhookId": "90db7d1a-dea6-4c5e-a6ee-00480ee6fd1e"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "bc617054-ff59-4631-80d6-cd595a025522",
+              "leftValue": "={{ $('Datos Estandar').item.json['Formato de evidencia:'] }}",
+              "rightValue": "=Ph",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -784,
+        1168
+      ],
+      "id": "e4c65960-aa6e-408d-9e93-2492a117a7be",
+      "name": "Fotografia o Texto"
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "phoneNumberId": "922902700900527",
+        "recipientPhoneNumber": "={{ $('Datos Estandar').item.json['Teléfono:'] }}",
+        "message": "=Documenta la validacion de: {{ $('Datos Estandar').item.json['Descripcion de Actividad:'] }}\nEvidencia: {{ $('Datos Estandar').item.json['Validacion - Evidencia:  '] }}",
+        "responseType": "customForm",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Inserta evidencia",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "resumeAmount": 180,
+              "resumeUnit": "minutes"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        -496,
+        1184
+      ],
+      "id": "3678ee9c-ff25-408f-838a-e4d2729875a9",
+      "name": "Mensaje con descripcion de actividad y solicitud de evidencia al tecnico4",
+      "webhookId": "2301f148-c379-46eb-8b84-7959485fa9ea"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://stg.saiv3api.imagendinamica.mx/api/login",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "email",
+              "value": "ext-n8n1@imagendinamica.com"
+            },
+            {
+              "name": "password",
+              "value": "@7q7dU5(\"bH1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        576,
+        1184
+      ],
+      "id": "b6ae9b6d-c3d9-48ca-bf7e-08d294dcee65",
+      "name": "SAI Autenticacion7"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://stg.saiv3api.imagendinamica.mx/api/serviceorders/{{ $('Datos Estandar').item.json['Numero de orden'] }}/updatemonitorevidence",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer  {{ $('SAI Autenticacion7').item.json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "inv_id",
+              "value": "={{ $('Datos Estandar').item.json.inv_id }}"
+            },
+            {
+              "name": "service_id",
+              "value": "={{ $('Datos Estandar').item.json.service_id }}"
+            },
+            {
+              "name": "act_evid_status",
+              "value": "={{ $('Validacion Texto - SAI').item.json['Status Validado'] }}"
+            },
+            {
+              "name": "act_evid_id",
+              "value": "={{ $('Datos Estandar').item.json.act_evid_id }}"
+            },
+            {
+              "name": "activity_id",
+              "value": "={{ $('Datos Estandar').item.json.activity_id }}"
+            },
+            {
+              "name": "=FSM_fileID_text",
+              "value": "={{ $('Documentacion Validacion Tx').item.json['Documentacion Actividad Texto'] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        784,
+        1184
+      ],
+      "id": "c4add6c7-0731-4d7a-ad8e-5dece5827334",
+      "name": "SAI Registro de actividades3"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "922902700900527",
+        "recipientPhoneNumber": "={{ $('Datos Estandar').item.json['Teléfono:'] }}",
+        "textBody": "Validación exitosa. Si existe actividad pendiente se te asignara en un momento.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        2208,
+        1712
+      ],
+      "id": "e81dec74-f78c-4b42-8e41-c4b89df3ed0b",
+      "name": "Mensaje Tecnico Evidencia Registrada",
+      "webhookId": "562e66e8-fd0c-455e-a7ac-b2d08dc67649"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0d32fede-73f2-471c-a57e-db6d40687801",
+              "name": "Documentacion Actividad Texto",
+              "value": "={{ $json.data['Inserta evidencia'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -288,
+        1184
+      ],
+      "id": "beab8301-abc4-4911-9791-955655301192",
+      "name": "Documentacion Validacion Tx"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://stg.saiv3api.imagendinamica.mx/api/login",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "email",
+              "value": "ext-n8n1@imagendinamica.com"
+            },
+            {
+              "name": "password",
+              "value": "@7q7dU5(\"bH1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -5472,
+        2432
+      ],
+      "id": "647be3fd-bd73-4aca-bc1f-46c0245a052e",
+      "name": "SAI Autenticacion2",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "58dc8c16-9822-498e-91af-390b858daf8c",
+              "leftValue": "={{ $json.data['Iniciar orden'] }}",
+              "rightValue": "Si",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -3840,
+        2400
+      ],
+      "id": "97499084-4df4-4483-8762-4135460969ad",
+      "name": "Arranque de orden1",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d5eb4f38-8185-4dc4-b039-25e8f28c09f7",
+              "name": "Orden",
+              "value": "={{ $('Aggregate1').item.json.body[0].messages[0].text.body }}",
+              "type": "number"
+            },
+            {
+              "id": "e7cf6a40-8645-4f8b-bab0-227ad9f1df17",
+              "name": "Telefono Persona Inicia Orden",
+              "value": "={{ $('Aggregate1').item.json.body[0].contacts[0].wa_id }}",
+              "type": "string"
+            },
+            {
+              "id": "1daa278f-6698-41cf-b049-73cb0c78210d",
+              "name": "Telefono Agente",
+              "value": "={{ $json.execution_info.agente }}",
+              "type": "string"
+            },
+            {
+              "id": "78255d33-a6e6-48f8-82cf-9c8af5bcb594",
+              "name": "Telefono Responsable",
+              "value": "={{ $json.execution_info.operativo }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -4880,
+        2416
+      ],
+      "id": "935c6d32-dc9b-4f1b-9dce-3bac999b428b",
+      "name": "Orden editor1",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f4c6e7b8-c3e0-4bfb-9955-79ffd5eaa9ff",
+              "name": "Orden",
+              "value": "={{ $('Aggregate1').item.json.body[0].messages[0].text.body }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -5664,
+        2432
+      ],
+      "id": "836ee5b6-9ebe-4080-900b-cd8558b59f36",
+      "name": "Obtener orden",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "url": "=https://stg.saiv3api.imagendinamica.mx/api/serviceorders/{{ $('Orden editor1').item.json.Orden }}/executioninfo?current_act=1 ",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization ",
+              "value": "=Bearer  {{ $json.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -3952,
+        2080
+      ],
+      "id": "ab248962-3082-4473-9b76-c6b6092ff030",
+      "name": "SAI Obtener Ordenes Principal",
+      "retryOnFail": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://idinamica.app.n8n.cloud/webhook/initWO",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "wo",
+              "value": "={{ $('SAI Obtener Ordenes Principal').item.json.execution_info.inventories[0].FSM_workorder_id }}"
+            },
+            {
+              "name": "serviceId",
+              "value": "={{ $json.FSM_service_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -2624,
+        2064
+      ],
+      "id": "d78dc1e5-510c-4459-b137-3777b923123f",
+      "name": "Validacion Cita Zoho",
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://idinamica.app.n8n.cloud/webhook/start-appoinment",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "appointment",
+              "value": "={{ $('Validacion Cita Zoho').item.json.idAppointment }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -2128,
+        1952
+      ],
+      "id": "f43f3eee-4eea-4d26-a6bc-ef26b3afa961",
+      "name": "Iniciar cita Zoho"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://idinamica.app.n8n.cloud/webhook/job-sheet-img",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "Form_Id",
+              "value": "={{ $('Datos Estandar').item.json.FSM_job_sheet_id }}"
+            },
+            {
+              "name": "Service_Line_Item",
+              "value": "={{ $('Validacion Cita Zoho').item.json.idServiceLineItem }}"
+            },
+            {
+              "name": "Service_Appointment",
+              "value": "={{ $('Validacion Cita Zoho').item.json.idAppointment }}"
+            },
+            {
+              "name": "Status",
+              "value": "Completed"
+            },
+            {
+              "name": "api_name",
+              "value": "={{ $('Datos Estandar').item.json.FSM_field_api_name }}"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "data",
+              "inputDataFieldName": "evidencia"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        576,
+        176
+      ],
+      "id": "7bc5a991-819b-47a0-8e4b-acb875d78e75",
+      "name": "Evidencia Zoho IMG"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://idinamica.app.n8n.cloud/webhook/job-sheet-text",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "Form_Id",
+              "value": "={{ $('Datos Estandar').item.json.FSM_job_sheet_id }}"
+            },
+            {
+              "name": "Service_Line_Item",
+              "value": "={{ $('Validacion Cita Zoho').item.json.idServiceLineItem }}"
+            },
+            {
+              "name": "Service_Appointment",
+              "value": "={{ $('Validacion Cita Zoho').item.json.idAppointment }}"
+            },
+            {
+              "name": "Status",
+              "value": "Completed"
+            },
+            {
+              "name": "api_name",
+              "value": "={{ $('Datos Estandar').item.json.FSM_field_api_name }}"
+            },
+            {
+              "name": "data",
+              "value": "={{ $('Documentacion Validacion Tx').item.json['Documentacion Actividad Texto'] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        128,
+        1184
+      ],
+      "id": "34ef143d-2fef-4bf7-b7cb-5ba0e527ad80",
+      "name": "Evidencia Zoho Txt"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://idinamica.app.n8n.cloud/webhook/job-sheet-img",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "Form_Id",
+              "value": "={{ $('Datos Estandar').item.json.FSM_job_sheet_id }}"
+            },
+            {
+              "name": "Service_Line_Item",
+              "value": "={{ $('Validacion Cita Zoho').item.json.idServiceLineItem }}"
+            },
+            {
+              "name": "Service_Appointment",
+              "value": "={{ $('Validacion Cita Zoho').item.json.idAppointment }}"
+            },
+            {
+              "name": "Status",
+              "value": "Completed"
+            },
+            {
+              "name": "api_name",
+              "value": "={{ $('Datos Estandar').item.json.FSM_field_api_name }}"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "data",
+              "inputDataFieldName": "evidencia"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1088,
+        1536
+      ],
+      "id": "b045c6ed-ef75-4345-8442-7b708d4dfca0",
+      "name": "Evidencia Zoho IMG1"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "GPT-4O"
+        },
+        "text": "=Eres un asistente experto analizando imagenes. Tu rol es analizar la siguiente imagen y validar que efectivamente cumple con los parametros en: {{ $('Datos Estandar').item.json['Validacion - Evidencia:  '] }}. Analiza correctamente los parametros y que la imagen cumpla con esos parametros.\nLas imagenes deben ser claras y con buen enfoque, de otra forma no las valides. \nTu output debe ser solo: Valido / No Valido",
+        "inputType": "base64",
+        "binaryPropertyName": "Inserta_evidencia",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -224,
+        576
+      ],
+      "id": "5c973798-86d3-4d77-a03f-fca91dd23d94",
+      "name": "IA - Validacion"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://idinamica.app.n8n.cloud/webhook/job-sheet-id",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "Form_Id",
+              "value": "={{ $('Datos Estandar').item.json.FSM_job_sheet_id }}"
+            },
+            {
+              "name": "Service_Line_Item",
+              "value": "={{ $('Validacion Cita Zoho').item.json.idServiceLineItem }}"
+            },
+            {
+              "name": "Service_Appointment",
+              "value": "={{ $('Validacion Cita Zoho').item.json.idAppointment }}"
+            },
+            {
+              "name": "Status",
+              "value": "Completed"
+            },
+            {
+              "name": "api_name",
+              "value": "={{ $('Datos Estandar').item.json.FSM_field_api_name }}"
+            },
+            {
+              "name": "data",
+              "value": "={{ $('Datos Estandar').item.json.FSM_fileID_text }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -2832,
+        1424
+      ],
+      "id": "81ba6302-5525-4eb8-9206-f2b65f7cf821",
+      "name": "Zoho Jobsheet ID"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "42915d23-fa3d-4cf1-b901-ceaa2ed6c374",
+              "leftValue": "={{ $json.initWo }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2400,
+        2064
+      ],
+      "id": "574cda68-6257-4412-b763-42ba2d8d033e",
+      "name": "Cita Iniciada Zoho"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://stg.saiv3api.imagendinamica.mx/api/login",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "email",
+              "value": "ext-n8n1@imagendinamica.com"
+            },
+            {
+              "name": "password",
+              "value": "@7q7dU5(\"bH1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2416,
+        1424
+      ],
+      "id": "85a171e2-6c05-4e02-b3d4-8b1c921916d7",
+      "name": "SAI Autenticacion8"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://stg.saiv3api.imagendinamica.mx/api/serviceorders/{{ $('Datos Estandar').item.json['Numero de orden'] }}/updatemonitorevidence",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer  {{ $('SAI Autenticacion8').item.json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "inv_id",
+              "value": "={{ $('Datos Estandar').item.json.inv_id }}"
+            },
+            {
+              "name": "service_id",
+              "value": "={{ $('Datos Estandar').item.json.service_id }}"
+            },
+            {
+              "name": "act_evid_status",
+              "value": "=F"
+            },
+            {
+              "name": "act_evid_id",
+              "value": "={{ $('Datos Estandar').item.json.act_evid_id }}"
+            },
+            {
+              "name": "activity_id",
+              "value": "={{ $('Datos Estandar').item.json.activity_id }}"
+            },
+            {
+              "name": "=FSM_fileID_text",
+              "value": "={{ $('Zoho Jobsheet ID').item.json.data[1].data.file_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2208,
+        1424
+      ],
+      "id": "23d9b127-1596-4d60-9b52-dc914e181fe6",
+      "name": "SAI Registro de actividades4"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://idinamica.app.n8n.cloud/webhook/completed-appoinment",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "appointment",
+              "value": "={{ $('Validacion Cita Zoho').item.json.idAppointment }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        784,
+        176
+      ],
+      "id": "e7db3085-16df-4d27-aa49-6677b30efe3f",
+      "name": "Cerrar Cita Zoho",
+      "executeOnce": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://idinamica.app.n8n.cloud/webhook/completed-appoinment",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "appointment",
+              "value": "={{ $('Validacion Cita Zoho').item.json.idAppointment }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        336,
+        1184
+      ],
+      "id": "e74ca1ab-3697-47d6-9626-f32fb99b7f46",
+      "name": "Cerrar Cita Zoho1",
+      "executeOnce": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://idinamica.app.n8n.cloud/webhook/completed-appoinment",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "appointment",
+              "value": "={{ $('Validacion Cita Zoho').item.json.idAppointment }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1248,
+        1696
+      ],
+      "id": "a8b996df-7dde-4235-9d84-a75fa334a605",
+      "name": "Cerrar Cita Zoho2",
+      "executeOnce": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://idinamica.app.n8n.cloud/webhook/terminate-appoinment",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "appointment",
+              "value": "={{ $('Validacion Cita Zoho').item.json.idAppointment }}"
+            },
+            {
+              "name": "notes",
+              "value": "={{ $json.data['Razon de no proceder con la actividad'] }} - {{ $json.data.Motivo }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -672,
+        2224
+      ],
+      "id": "bce8d8fa-8d89-41dd-9455-25625cd70846",
+      "name": "Terminar Cita Zoho",
+      "executeOnce": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://idinamica.app.n8n.cloud/webhook/completed-appoinment",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "appointment",
+              "value": "={{ $('Validacion Cita Zoho').item.json.idAppointment }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -2640,
+        1424
+      ],
+      "id": "c95dc436-aa68-40b4-98b4-0d3f343a1f71",
+      "name": "Cerrar Cita Zoho3",
+      "executeOnce": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://idinamica.app.n8n.cloud/webhook/job-sheet-text",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "Form_Id",
+              "value": "={{ $('Datos Estandar').item.json.FSM_job_sheet_id }}"
+            },
+            {
+              "name": "Service_Line_Item",
+              "value": "={{ $('Validacion Cita Zoho').item.json.idServiceLineItem }}"
+            },
+            {
+              "name": "Service_Appointment",
+              "value": "={{ $('Validacion Cita Zoho').item.json.idAppointment }}"
+            },
+            {
+              "name": "Status",
+              "value": "Completed"
+            },
+            {
+              "name": "api_name",
+              "value": "={{ $('Datos Estandar').item.json.FSM_field_api_name }}"
+            },
+            {
+              "name": "data",
+              "value": "={{ $('Datos Estandar').item.json.FSM_fileID_text }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -2832,
+        1664
+      ],
+      "id": "45e97866-051c-42d2-81d8-e10ec28d1be2",
+      "name": "Evidencia Zoho Txt2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://stg.saiv3api.imagendinamica.mx/api/login",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "email",
+              "value": "ext-n8n1@imagendinamica.com"
+            },
+            {
+              "name": "password",
+              "value": "@7q7dU5(\"bH1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2416,
+        1648
+      ],
+      "id": "76e937b5-05ba-4db9-a872-88cbd3486cf5",
+      "name": "SAI Autenticacion9"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://stg.saiv3api.imagendinamica.mx/api/serviceorders/{{ $('Datos Estandar').item.json['Numero de orden'] }}/updatemonitorevidence",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer  {{ $('SAI Autenticacion9').item.json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "inv_id",
+              "value": "={{ $('Datos Estandar').item.json.inv_id }}"
+            },
+            {
+              "name": "service_id",
+              "value": "={{ $('Datos Estandar').item.json.service_id }}"
+            },
+            {
+              "name": "act_evid_status",
+              "value": "=F"
+            },
+            {
+              "name": "act_evid_id",
+              "value": "={{ $('Datos Estandar').item.json.act_evid_id }}"
+            },
+            {
+              "name": "activity_id",
+              "value": "={{ $('Datos Estandar').item.json.activity_id }}"
+            },
+            {
+              "name": "=FSM_fileID_text",
+              "value": "={{ $('Datos Estandar').item.json.FSM_fileID_text }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2208,
+        1648
+      ],
+      "id": "b3dd64c0-be9a-4fe9-adcf-61ef854c8edd",
+      "name": "SAI Registro de actividades5"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://idinamica.app.n8n.cloud/webhook/completed-appoinment",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "appointment",
+              "value": "={{ $('Validacion Cita Zoho').item.json.idAppointment }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -2656,
+        1664
+      ],
+      "id": "6309ed55-e186-4274-8248-38f2e7d478fc",
+      "name": "Cerrar Cita Zoho4",
+      "executeOnce": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "922902700900527",
+        "recipientPhoneNumber": "={{ $('Aggregate1').item.json.body[0].messages[0].from }}",
+        "textBody": "El numero de orden no es valido (deben ser digitos numericos). Inténtalo de nuevo en 1 minuto.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        -5888,
+        2640
+      ],
+      "id": "d905a24e-aa18-45d5-8a6b-07d733d8de1f",
+      "name": "Orden Invalida",
+      "webhookId": "16033987-9a53-44ac-97b6-05bca8072e9d"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "922902700900527",
+        "recipientPhoneNumber": "={{ $('Aggregate1').item.json.body[0].messages[0].from }}",
+        "textBody": "El numero de orden proporcionado no existe. Inténtalo de nuevo en 1 minuto.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        -5088,
+        2640
+      ],
+      "id": "e540ffea-cc20-4ffd-b14e-8cde3dd83a76",
+      "name": "Orden No Existe",
+      "webhookId": "16033987-9a53-44ac-97b6-05bca8072e9d"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c0dac1e2-3f34-4e60-8160-adbd0d0b01b0",
+              "leftValue": "={{ $json.isNumber }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -5888,
+        2448
+      ],
+      "id": "29deb382-9a99-48c9-a8b0-6268683130f3",
+      "name": "Check If Order is Valid"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c211a4bb-0c5a-40d8-b4e7-35b5c2212c4b",
+              "leftValue": "={{ Array.isArray($json.execution_info) ? {} : $json.execution_info }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "fbafd9af-d651-4ddf-9241-e0976a49028e",
+              "leftValue": "={{ Array.isArray($json.execution_info) ? {} : $json.execution_info }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -5088,
+        2432
+      ],
+      "id": "e508ea45-b8d5-488e-90a9-4d681363e077",
+      "name": "Order Not Found"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "922902700900527",
+        "recipientPhoneNumber": "={{ $json['Telefono Persona Inicia Orden'] }}",
+        "textBody": "No está autorizado para iniciar la ejecucion de la Orden.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        -4688,
+        2640
+      ],
+      "id": "95206e88-9a9e-4f6e-82a5-a1c5ca4f18ad",
+      "name": "No Autorizado Para Iniciar Ejecucion",
+      "webhookId": "16033987-9a53-44ac-97b6-05bca8072e9d"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "1cb53a41-22d5-42a8-8beb-64a4a5e4c657",
+              "leftValue": "={{ $('Datos Estandar').item.json['Formato de evidencia:'] }}",
+              "rightValue": "Ph",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2016,
+        1664
+      ],
+      "id": "da540337-db83-4b3c-83ab-ed4a2d69da46",
+      "name": "Foto / Texto"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ddad07c6-6247-4e6c-a4ae-22657cb8677c",
+              "name": "Status Validado",
+              "value": "F",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -80,
+        1184
+      ],
+      "id": "86d0c18f-8b03-4b3b-b683-917d0aff7f49",
+      "name": "Validacion Texto - SAI"
+    },
+    {
+      "parameters": {
+        "resource": "media",
+        "operation": "mediaUrlGet",
+        "mediaGetId": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        -144,
+        800
+      ],
+      "id": "4bd57608-1d40-4a2e-9e64-0ebf62b51a3d",
+      "name": "Download media",
+      "webhookId": "179e9689-a9ae-4047-a75e-67c488c2fe2b"
+    },
+    {
+      "parameters": {
+        "resource": "media",
+        "phoneNumberId": "922902700900527",
+        "mediaPropertyName": "Inserta_evidencia",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        -304,
+        800
+      ],
+      "id": "cf59f091-0efc-4515-86f2-2668fc7d2db2",
+      "name": "Upload media1",
+      "webhookId": "9cbf447a-4277-4a4b-9afb-d8a7c4850676"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -16,
+        640
+      ],
+      "id": "a6dfb37d-2376-4d3d-a87c-0df6c10ab0a3",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "evidencia"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        256,
+        480
+      ],
+      "id": "df4ec945-2268-4127-882f-17d8db7ba85f",
+      "name": "Obtener Imagen con URL"
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "phoneNumberId": "922902700900527",
+        "recipientPhoneNumber": "={{ $('Datos Estandar').item.json['Teléfono:'] }}",
+        "message": "=Manda la validacion de: {{ $('Datos Estandar').item.json['Descripcion de Actividad:'] }}\nEvidencia: {{ $('Datos Estandar').item.json['Validacion - Evidencia:  '] }}",
+        "responseType": "customForm",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Inserta evidencia",
+              "fieldType": "file",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "resumeAmount": 180,
+              "resumeUnit": "minutes"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        -512,
+        672
+      ],
+      "id": "caf9156b-0721-408a-97e5-2ba3e395900f",
+      "name": "Msj descripcion y solicitud de evidencia 1",
+      "webhookId": "2301f148-c379-46eb-8b84-7959485fa9ea"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8faf3316-920b-4818-a8a3-0162238122a5",
+              "leftValue": "={{ $('Datos Estandar').item.json['Validacion IA - Agente'] }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "ded6cc9a-da1f-42c5-b416-dc8cf7ca8535",
+              "leftValue": "={{ $('Datos Estandar').item.json['Formato de evidencia:'] }}",
+              "rightValue": "Tx",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -704,
+        1600
+      ],
+      "id": "7850ded6-77d2-4218-a0c0-e515a9b511d2",
+      "name": "Fotografia o Texto 2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "feee9ac8-1d2c-45ff-9fe1-35249fcf8b02",
+              "leftValue": "={{ $json.content }}",
+              "rightValue": "Valido",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        112,
+        640
+      ],
+      "id": "2e5cb0be-c3e6-4515-9f1e-9794deaf48d0",
+      "name": "Validacion Foto"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7c852d81-5747-4d76-8783-28b04d8eb718",
+              "leftValue": "={{ $('Datos Estandar').item.json['Tipo de Actividad:'] }}",
+              "rightValue": "=G",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "cc732aed-3a43-4751-a170-9c7a747b902e",
+              "leftValue": "={{ $('Datos Estandar').item.json.FSM_fileID_text }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1888,
+        2048
+      ],
+      "id": "e94a8d71-b2e3-4c8f-944d-b2bbc400c8f2",
+      "name": "Actividad General y FSM Field ID",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "phoneNumberId": "922902700900527",
+        "recipientPhoneNumber": "={{ $('Datos Estandar').item.json['Teléfono:'] }}",
+        "message": "=No fue posible validar la evidencia. Mande nueva evidencia, antes de asignarte con el agente.\nManda la validacion de: {{ $('Datos Estandar').item.json['Descripcion de Actividad:'] }}\nEvidencia: {{ $('Datos Estandar').item.json['Validacion - Evidencia:  '] }}",
+        "responseType": "customForm",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Inserta evidencia",
+              "fieldType": "file"
+            }
+          ]
+        },
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "resumeAmount": 180,
+              "resumeUnit": "minutes"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        1216,
+        672
+      ],
+      "id": "db8ed967-5cb8-441a-b939-de6008b84751",
+      "name": "Mensaje con descripcion de actividad y solicitud de evidencia al tecnico3",
+      "webhookId": "2301f148-c379-46eb-8b84-7959485fa9ea"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "GPT-4O"
+        },
+        "text": "=Eres un asistente experto analizando imagenes. Tu rol es analizar la siguiente imagen y validar que efectivamente cumple con los parametros en: {{ $('Datos Estandar').item.json['Validacion - Evidencia:  '] }}. Analiza correctamente los parametros y que la imagen cumpla con esos parametros.\nLas imagenes deben ser claras y con buen enfoque, de otra forma no las valides. \nTu output debe ser solo: Valido / No Valido",
+        "inputType": "base64",
+        "binaryPropertyName": "Inserta_evidencia",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        592,
+        592
+      ],
+      "id": "6724367c-81a6-481c-8fbb-b252a686af21",
+      "name": "IA - Validacion6"
+    },
+    {
+      "parameters": {
+        "resource": "media",
+        "operation": "mediaUrlGet",
+        "mediaGetId": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        688,
+        816
+      ],
+      "id": "bf86d1ce-6e18-4095-94e0-48d5939aca5d",
+      "name": "Download media3",
+      "webhookId": "179e9689-a9ae-4047-a75e-67c488c2fe2b"
+    },
+    {
+      "parameters": {
+        "resource": "media",
+        "phoneNumberId": "922902700900527",
+        "mediaPropertyName": "Inserta_evidencia",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        528,
+        816
+      ],
+      "id": "ec0ab6d5-c7d4-480c-9b20-5bcfa6112365",
+      "name": "Upload media3",
+      "webhookId": "9cbf447a-4277-4a4b-9afb-d8a7c4850676"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        816,
+        656
+      ],
+      "id": "b2a1f269-ac9c-4902-8af7-a6bfa3c1cc69",
+      "name": "Merge5"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "feee9ac8-1d2c-45ff-9fe1-35249fcf8b02",
+              "leftValue": "={{ $json.content }}",
+              "rightValue": "Valido",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        944,
+        656
+      ],
+      "id": "6ec93d0e-6a43-4979-95a8-306704c5f087",
+      "name": "Validacion Foto2"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "GPT-4O"
+        },
+        "text": "=Eres un asistente experto analizando imagenes. Tu rol es analizar la siguiente imagen y validar que efectivamente cumple con los parametros en: {{ $('Datos Estandar').item.json['Validacion - Evidencia:  '] }}. Analiza correctamente los parametros y que la imagen cumpla con esos parametros.\nLas imagenes deben ser claras y con buen enfoque, de otra forma no las valides. \nTu output debe ser solo: Valido / No Valido",
+        "inputType": "base64",
+        "binaryPropertyName": "Inserta_evidencia",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1488,
+        576
+      ],
+      "id": "b7e2f282-ad10-4dbe-8d4b-203a89a0b744",
+      "name": "IA - Validacion7"
+    },
+    {
+      "parameters": {
+        "resource": "media",
+        "operation": "mediaUrlGet",
+        "mediaGetId": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        1584,
+        800
+      ],
+      "id": "ab55bf0e-5422-4125-8124-483ccaeb7954",
+      "name": "Download media4",
+      "webhookId": "179e9689-a9ae-4047-a75e-67c488c2fe2b"
+    },
+    {
+      "parameters": {
+        "resource": "media",
+        "phoneNumberId": "922902700900527",
+        "mediaPropertyName": "Inserta_evidencia",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        1424,
+        800
+      ],
+      "id": "a37ce323-bc70-4257-8970-0cba81f71959",
+      "name": "Upload media4",
+      "webhookId": "9cbf447a-4277-4a4b-9afb-d8a7c4850676"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1712,
+        640
+      ],
+      "id": "48377943-2479-4c75-b500-368b395dc96a",
+      "name": "Merge6"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "feee9ac8-1d2c-45ff-9fe1-35249fcf8b02",
+              "leftValue": "={{ $json.content }}",
+              "rightValue": "Valido",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1840,
+        640
+      ],
+      "id": "7ec6f6ab-2d8f-4d45-8c21-ec2081372df8",
+      "name": "Validacion Foto3"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "evidencia"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1120,
+        496
+      ],
+      "id": "c7e5e663-0790-4a39-a9c4-8405d6afd1ce",
+      "name": "Obtener Imagen con URL1"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "evidencia"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2096,
+        512
+      ],
+      "id": "1688c38f-c1ba-4e41-b478-a7c99049f65a",
+      "name": "Obtener Imagen con URL2"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Download media1').item.json.url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "evidencia"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        848,
+        1536
+      ],
+      "id": "9ebe4d03-1cfd-4047-90dd-f33302a20fd0",
+      "name": "Obtener Imagen con URL3"
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "phoneNumberId": "922902700900527",
+        "recipientPhoneNumber": "={{ $('Orden editor1').item.json['Telefono Persona Inicia Orden'] }}",
+        "message": "=Es correcta la orden?\nSe iniciara la orden: \n{{ $('Invalid Agent or Responsible Number').item.json.Orden }}\n\nResponde: Si / No\n",
+        "responseType": "customForm",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Iniciar orden",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Si"
+                  },
+                  {
+                    "option": "No"
+                  }
+                ]
+              },
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "resumeAmount": 180,
+              "resumeUnit": "minutes"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        -4032,
+        2400
+      ],
+      "id": "90057ec1-953b-40c2-952a-bfa5d33bdd25",
+      "name": "Mensaje de Inicio de Orden",
+      "webhookId": "0eadb147-e0b0-49f3-9f8a-1121de924710"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "0bedddb8-8991-4eaa-bce0-4fee99efa07a",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -6672,
+        2464
+      ],
+      "id": "d005f074-dd88-435b-b160-901f6bae3297",
+      "name": "Trigger Inicio",
+      "webhookId": "0bedddb8-8991-4eaa-bce0-4fee99efa07a",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "9ae66197-d469-4e6d-a434-d5018d2e3ae0",
+              "leftValue": "={{ $json.body[0].messages[0] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "exists",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "a483147a-5d2c-4a47-b43b-0de194f424f8",
+              "leftValue": "={{ $json.body[0].messages[0].button }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -6288,
+        2464
+      ],
+      "id": "7d885043-751f-4034-9669-658962d60edb",
+      "name": "Message Body"
+    },
+    {
+      "parameters": {
+        "jsCode": "const abc = !Number.isNaN(Number($('Aggregate1').first().json.body[0].messages[0].text.body));\n\nreturn [\n  {\n    json: {\n      isNumber: abc\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -6080,
+        2448
+      ],
+      "id": "996f7fa6-349e-4727-9a14-bb753aa78f1a",
+      "name": "Mensaje debe ser Numero"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "922902700900527",
+        "recipientPhoneNumber": "={{ $('Orden editor1').item.json['Telefono Persona Inicia Orden'] }}",
+        "textBody": "Intente de nuevo cuando este listo con la orden correspondiente.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        -3840,
+        2640
+      ],
+      "id": "e7bb2fb6-27a3-45a9-9089-ebd695a37d3d",
+      "name": "Falso Inicio",
+      "webhookId": "ae0a07f7-3d1f-4c1c-98f0-531c15cfc52f"
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "phoneNumberId": "922902700900527",
+        "recipientPhoneNumber": "={{ $('Datos Estandar').item.json['Teléfono:'] }}",
+        "message": "=La actividad es de tipo: {{ $('Datos Estandar').item.json['Tipo de Actividad:'] }}\nDescripcion: {{ $('Datos Estandar').item.json['Descripcion de Actividad:'] }}\nValidacion: {{ $('Datos Estandar').item.json['Validacion - Evidencia:  '] }}\n\nSe puede proceder con la actividad? Si / No.\n",
+        "responseType": "customForm",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Respuesta",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Si"
+                  },
+                  {
+                    "option": "No"
+                  }
+                ]
+              },
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "resumeAmount": 180,
+              "resumeUnit": "minutes"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        -1664,
+        2064
+      ],
+      "id": "75734a29-5fc9-44a6-bb2e-c84733ee1c37",
+      "name": "Msj Al Tecnico con descripcion de actividad",
+      "webhookId": "c549a666-3f50-43fa-bdae-61cace34f18f",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "phoneNumberId": "922902700900527",
+        "recipientPhoneNumber": "={{ $('Datos Estandar').item.json['Teléfono:'] }}",
+        "message": "Cual es la razón de no poder proceder con la actividad? Escribe una de las opciones: \n1. VF (Visita en Falso) \n2. SNR (Servicio No Realizado) ",
+        "responseType": "customForm",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Razon de no proceder con la actividad",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "VF"
+                  },
+                  {
+                    "option": "SNR"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Motivo",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "resumeAmount": 180,
+              "resumeUnit": "minutes"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        -912,
+        2224
+      ],
+      "id": "bc940a01-8f79-41da-8cc7-fba72709b1c5",
+      "name": "Razon de NO proceder",
+      "webhookId": "c549a666-3f50-43fa-bdae-61cace34f18f",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "922902700900527",
+        "recipientPhoneNumber": "={{ $('Datos Estandar').item.json['Teléfono:'] }}",
+        "textBody": "Actividad Registrada. Si existe actividad pendiente se te asignara en un momento.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        160,
+        2208
+      ],
+      "id": "6b2220b0-2cf9-483c-a91e-d48decb65eba",
+      "name": "Status registrado",
+      "webhookId": "cd73cd25-7650-4894-b9d6-0b8de55e71bf"
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "phoneNumberId": "922902700900527",
+        "recipientPhoneNumber": "={{ $('Datos Estandar').item.json['Teléfono Agente'] }}",
+        "message": "=En la parte posterior se encuentra evidencia del tecnico por validar.\nLa actividad es: {{ $('Datos Estandar').item.json['Descripcion de Actividad:'] }}\nValidacion debe contener: {{ $('Datos Estandar').item.json['Validacion - Evidencia:  '] }}\nAgrega un comentario solo si la validacion NO es exitosa con la razon. \n\nSi es correcta la validacion responde con un: Si / No",
+        "responseType": "customForm",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Respuesta",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Si"
+                  },
+                  {
+                    "option": "No"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Comentario"
+            }
+          ]
+        },
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "resumeAmount": 180,
+              "resumeUnit": "minutes"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        368,
+        1616
+      ],
+      "id": "0b2adaaf-b62a-4b2d-96c7-60968c41a000",
+      "name": "Msj a Agente para validar evidencia",
+      "webhookId": "3c1b653b-1c74-4dd9-bc92-5a0ffb940776",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c5ca3033-e277-4481-9255-96eb16620b96",
+              "leftValue": "={{ $json.data.Respuesta }}",
+              "rightValue": "Si",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        576,
+        1616
+      ],
+      "id": "65562e22-a65d-4fe0-94e0-65eaca9c13f6",
+      "name": "actividad valida? (Si/no)"
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "phoneNumberId": "922902700900527",
+        "recipientPhoneNumber": "={{ $('Datos Estandar').item.json['Teléfono:'] }}",
+        "message": "=El agente no esta validando la evidencia.\nVuelva a mandar evidencia.\nManda la validacion de: {{ $('Datos Estandar').item.json['Descripcion de Actividad:'] }}\nEvidencia: {{ $('Datos Estandar').item.json['Validacion - Evidencia:  '] }}.\nComentario del agente: {{ $('Msj a Agente para validar evidencia').item.json.data.Comentario }}",
+        "responseType": "customForm",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Inserta evidencia",
+              "fieldType": "file",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "resumeAmount": 180,
+              "resumeUnit": "minutes"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        848,
+        1696
+      ],
+      "id": "fc57e5c1-614c-44ee-b4a1-33f12c148f87",
+      "name": "Msj al tecnico / motivo de no validacion",
+      "webhookId": "eac60650-1bcb-4afd-a1c3-8660882df05e"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "922902700900527",
+        "recipientPhoneNumber": "={{ $('Datos Estandar').item.json['Teléfono:'] }}",
+        "textBody": "Validación exitosa. Si existe actividad pendiente se te asignara en un momento.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        992,
+        1184
+      ],
+      "id": "562563fe-8757-4399-9ba8-07981149e074",
+      "name": "Validacion exitosa",
+      "webhookId": "562e66e8-fd0c-455e-a7ac-b2d08dc67649"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "922902700900527",
+        "recipientPhoneNumber": "={{ $('Datos Estandar').item.json['Teléfono:'] }}",
+        "textBody": "Validación exitosa. Si existe actividad pendiente se te asignara en un momento.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        1680,
+        176
+      ],
+      "id": "241fc8a0-e695-49d7-8815-e0c1358104a6",
+      "name": "Validacion exitosa1",
+      "webhookId": "562e66e8-fd0c-455e-a7ac-b2d08dc67649"
+    },
+    {
+      "parameters": {
+        "content": "# Trigger",
+        "height": 464,
+        "width": 3104
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -6752,
+        2384
+      ],
+      "typeVersion": 1,
+      "id": "a661002b-8f29-4aba-af2c-5a43fd096580",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Relacion de evidencias con ID",
+        "height": 576,
+        "width": 1120,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -2944,
+        1328
+      ],
+      "typeVersion": 1,
+      "id": "23f5fe76-fdd3-49d4-8d85-72b2936878b1",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Relacion de evidencias con ID\n\nEsta parte del flujo asocia con un ID una actividad general previamente validada.\n\n1. If(Fotografia o texto): Toma una ruta diferente dependiendo de el tipo de evidencia\n2. Http(Jobsheet id): Asocia una evidencia general que se subio previamente con un ID.\n3. http(Cerrar cita): Intenta cerrar la cita correspondiente.\n4. SAI(Autentificacion) - Autentificacion para entrar en el sistema.\n5. SAI(Registro) - Registra la actividad en SAI como Finalizada. ",
+        "height": 288,
+        "width": 1120,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -2944,
+        1024
+      ],
+      "typeVersion": 1,
+      "id": "daed5fb3-5985-478a-a27d-ff13577ab998",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "# Orquestardor y validacion de actividades / trabajo\n",
+        "height": 448,
+        "width": 5024,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -4608,
+        1920
+      ],
+      "typeVersion": 1,
+      "id": "1f48b370-8ed3-4522-b478-42d72079cee5",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "# Documentacion Trigger\n\n### Esta parte se encarga de filtrar los Mensajes, eliminar errores de ejecucion y arrancar la orden. \n1. Webhook (Trigger Inicio) - Recibe los mensajes enviados via WhatsApp.\n2. Aggregate - Desglosa y se queda solo con el body del json recibido.\n3. IF (Message Body) - Separa las ejecuciones de los mensajes con un body o no. Esto limita errores en las ejecuciones.\n4. Code (Mensaje debe ser Numero) - Filtra aquellos mensajes que en el string no contienen numeros.\n5. IF (Check If Order Is Valid) - Si el string no contiene numeros \n6. WhatsApp Mensaje - Mensaje con Orden Invalida \n7. SET(Obtener Orden) - Obtiene desde el aggregate el numero de telefono de la persona que inicia ventana\n8. SAI - Autenticacion para entrar en el sistema \n9. SAI - Obtiene el numero de orden \n10.IF - Order NOT found - Si la orden no existe \n11. WhatsApp(No autorizado para iniciar ejecucion) - Mensaje a persona que abre ventana sobre No autorizacion de proceder con la orden\n12. IF(Order Not Found1) - Orden no encontrada - no autorizado \n13. WhatsApp(No autorizado para iniciar) - La persona no tiene autorizacion para iniciar la orden. \n14. WhatsApp - Mensaje de confirmacion de inicio de la orden.\n15. IF(Arranque de orden) - Si - No\n16. WhattsApp(Falso Inicio) - Mensaje encaso de no continuar con la orden ",
+        "height": 592,
+        "width": 608
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -7376,
+        2368
+      ],
+      "typeVersion": 1,
+      "id": "7f28eeba-aed5-44d4-a869-7d654cef4da3",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "## Orquestador y validacion de actividades\n\n### Esta parte del flujo se encarga de la ejecucion del flujo. Es la parte principal que orquesta las actividades de la orden. \n1. WAIT (Espera 10 segundos antes de pedir la siguiente actividad) \n2. SAI - Autenticacion para entrar en el sistema\n3. SAI - Obtiene el numero de orden \n4. Aggregate - Desglosa el json por partes y obtiene el body\n5. SET - Obtiene el body del json \n6. SET(Datos Estandar) - Maneja una constante de todos los datos del flujo. \n7. IF(Hay actividad por realizar) - Si es True continua el flujo, si es False, ya no hay actividades pendientes \n9. WhatsApp - Mensaje de servicio terminado \n10. Validacion Cita Zoho - Valida la cita ya creada \n11. Iniciar Cita - Inicia la cita en Zoho si es necesario.\n12. IF (Validacion de cita) - True: la cita ya esta iniciada, False: Inicia la cita \n13. IF(Actividad General con FieldID_text) - Si existe una actividad General con fieldId_text sube para validar la evidencia subida previamente.  \n14. WhatsApp - Mensaje con descripcion de actividad y evidencia.\n15. Set - Obtiene el mensaje dado por el tecnico sobre continuacion de la actividad.\n16. IF(Se puede trabajar en la actividad) - Si se puede avanzar con la actividad, continua el flujo, si no puede continuar, se documenta la razon de no poder continuar. \n17. WhatsApp(Razon de no proceder) - Se captura la razon con un comentario por parte del tecnico y el status. (SNR o VF) \n18. Terminar Cita Zoho - Cierra la cita en Zoho al no poder proceder con la actividad. \n19. SAI - Autenticacion para entrar en el sistema\n20. SAI - Registra el status de la actividad en esa orden \n21. WhatsApp(Status Registrado) - Registra el status y avisa al tecnico. ",
+        "height": 432,
+        "width": 544,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -5168,
+        1920
+      ],
+      "typeVersion": 1,
+      "id": "1ac04d2d-c063-4207-b3d8-e3d2922d3c8e",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "## Validacion Agente",
+        "height": 432,
+        "width": 3558,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1200,
+        1472
+      ],
+      "typeVersion": 1,
+      "id": "46df3b86-770f-4695-84a6-fba7d812ddfa",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "content": "## Validacion Agente\n\n### En esta parte se contacta al agente para validar la evidencia. \n\n1. IF(Validacion por IA) - Define si es validacion por agente o IA.\n2. IF (Fotografia o Texto) - Define si es documentacion via texto o fotografia.\n3. WhatsApp - Mensaje con descripcion de actividad y evidencia al tecnico.\n4. WhatsApp(Upload) - Se sube la fotografia y se obtiene un ID\n5. WhatsApp(Download) - Se obtiene data sobre la fotografia anterior.\n6. WhatsApp(Frwrd) - Se reenvia la evidencia fotografica tomada por el tecnico al agente.\n7. WhatsApp a Agente - Se manda fotografia y mensaje para la aceptacion de evidencia por parte del tecnico. \n8. IF(validacion) - True. El agente valido la evidencia o false si fue negativa la validacion.\n9. WhatsApp(Mensaje No validacion) - En caso de no validar la fotografia, el agente manda razon de no validacion al tecnico.\n10. Http(URL) - Si la imagen es valida, se obtiene el url para obtener el binary file y registrar evidencia.\n11. Http(Evidencia Zoho) - Se sube la evidencia en Zoho\n12. http(Cerrar cita) - Se intentara cerrar la cita si es posible o debe ser cerrada. \n13. SET(Valida status) - Valida el status en SAI sobre Finalizado\n14. SAI(Autentificacion) - Autentificacion para entrar en el sistema. \n15. SAI(Registro) - Registra la actividad en SAI como Finalizada. \n16. WhatsApp(Mensaje a tecnico) - Se notifica a tecnico sobre validacion exitosa. ",
+        "height": 432,
+        "width": 592,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1808,
+        1472
+      ],
+      "typeVersion": 1,
+      "id": "17f20784-b13c-42fc-9047-72d14e1f80ea",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "content": "## Validacion Documentacion Texto",
+        "height": 432,
+        "width": 3558,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1200,
+        1024
+      ],
+      "typeVersion": 1,
+      "id": "97109a8d-5b6e-43e6-8c4a-ffe12850ffb8",
+      "name": "Sticky Note8"
+    },
+    {
+      "parameters": {
+        "content": "## Validacion IA",
+        "height": 576,
+        "width": 3558,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1200,
+        432
+      ],
+      "typeVersion": 1,
+      "id": "5969f4ab-4190-404a-bb20-859e851309d6",
+      "name": "Sticky Note9"
+    },
+    {
+      "parameters": {
+        "content": "## Validacion Documentacion Texto\n\n### En esta parte se documentan las actividades de texto. \n\n1. WhatsApp - Mensaje con descripcion de actividad y evidencia al tecnico.\n2. Set(Mensaje con la evidencia (Texto)\n3. Set (Validacion Texto) - Es la F que se usa de finalizado en SAI. \n4. Zoho Txt - Se documenta la actividad en Zoho. \n5. http(Cerrar cita) - Se intentara cerrar la cita si es posible o debe ser cerrada. \n6. SAI(Autentificacion) - Autentificacion para entrar en el sistema. \n7. SAI(Registro) - Registra la actividad en SAI como Finalizada. \n8. WhatsApp(Mensaje a tecnico) - Se notifica a tecnico sobre validacion exitosa. ",
+        "height": 432,
+        "width": 592,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1808,
+        1024
+      ],
+      "typeVersion": 1,
+      "id": "a33373ac-297a-45f3-a13e-1745c27a94a8",
+      "name": "Sticky Note10"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "922902700900527",
+        "recipientPhoneNumber": "={{ $('Datos Estandar').item.json['Teléfono Agente'] }}",
+        "messageType": "image",
+        "mediaPath": "useMediaId",
+        "mediaId": "={{ $('Download media1').item.json.id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        176,
+        1616
+      ],
+      "id": "0e5d53ff-472b-4edf-86a2-1d88b0c7b03f",
+      "name": "Frwrd Evidencia Agente",
+      "webhookId": "4e0f344f-20d1-40d9-8920-71435fd7b4db"
+    },
+    {
+      "parameters": {
+        "content": "## Validacion IA\n\n### En esta parte se valida la fotografia por IA. (Se repite el proceso 3 veces en caso de validacion nula) \n\n1. WhatsApp - Mensaje con descripcion de actividad y evidencia al tecnico.\n2. Validacion por IA - Valida la imagen por IA mandada por el tecnico. \n3. WhatsApp(Upload) - Se sube la fotografia y se obtiene un ID\n4. WhatsApp(Download) - Se obtiene data sobre la fotografia anterior. \n5. Merge - Se hace un merge de los nodos previos de whatsapp y la validacion por IA. \n6. IF(Validacion foto) - Se determina si se valido la foto o no por IA. (true-false)\n7. htttp(Obtener URL) - Con el url obtenido previamente se obtiene el binary file para registrar evidencia",
+        "height": 576,
+        "width": 592,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1808,
+        432
+      ],
+      "typeVersion": 1,
+      "id": "7eca1975-1a34-4e39-b464-77410b2a89da",
+      "name": "Sticky Note11"
+    },
+    {
+      "parameters": {
+        "content": "## Registro de la actividad",
+        "height": 416,
+        "width": 1456
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        400,
+        0
+      ],
+      "typeVersion": 1,
+      "id": "289b9b9d-0924-487f-923b-2135e559d070",
+      "name": "Sticky Note12"
+    },
+    {
+      "parameters": {
+        "content": "1. Evidencia Zoho IMG - Se documenta la actividad en Zoho. \n2. http(Cerrar cita) - Se intentara cerrar la cita si es posible o debe ser cerrada. \n3  Set (validacion Status) - Se utiliza la F para registrar el status como finalizado\n4. SAI(Autentificacion) - Autentificacion para entrar en el sistema. \n5. SAI(Registro) - Registra la actividad en SAI como Finalizada. \n6. WhatsApp(Mensaje a tecnico) - Se notifica a tecnico sobre validacion exitosa. ",
+        "height": 416,
+        "width": 384
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        0,
+        0
+      ],
+      "typeVersion": 1,
+      "id": "6b6acfdd-23b8-4824-b182-cbb5f998a4c8",
+      "name": "Sticky Note13"
+    },
+    {
+      "parameters": {
+        "phoneNumberId": "922902700900527",
+        "recipientPhoneNumber": "={{ ($('Orden editor1').item.json['Telefono Persona Inicia Orden'].slice(-10) == $json['Telefono Agente'].slice(-10)) ? $json['Telefono Responsable'] : $json['Telefono Agente'] }}",
+        "template": "id_confirm_so_execution_v1|es_MX",
+        "components": {
+          "component": [
+            {
+              "bodyParameters": {
+                "parameter": [
+                  {
+                    "text": "={{ $json.Orden }}"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        -4240,
+        2400
+      ],
+      "id": "b6d00169-6879-4773-b878-f5b95d024570",
+      "name": "Template Inicio de Ejecucion",
+      "webhookId": "d24b63b2-8af8-48ce-bc0d-f6719cc108c1"
+    },
+    {
+      "parameters": {
+        "url": "=https://stg.saiv3api.imagendinamica.mx/api/serviceorders/{{ $('Obtener orden').item.json.Orden }}/mainparticipants\n",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization ",
+              "value": "=Bearer  {{ $json.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -5280,
+        2432
+      ],
+      "id": "ff085b29-b21e-4ab1-8d8c-e7cfc808e85d",
+      "name": "SAI Obtener Participantes Relevantes",
+      "retryOnFail": false,
+      "alwaysOutputData": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "922902700900527",
+        "recipientPhoneNumber": "={{ $('Orden editor1').item.json['Telefono Responsable'] }}",
+        "textBody": "=No existen actividades pendientes para la OS {{ $('Orden editor1').item.json.Orden }}. Servicio terminado",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        -2752,
+        2448
+      ],
+      "id": "4d1610c2-9204-432d-bbc9-92606edbaf87",
+      "name": "Servicio Terminado Responsable",
+      "webhookId": "d834d80f-1776-481a-a773-9529d6cc890c"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "922902700900527",
+        "recipientPhoneNumber": "={{ $('Orden editor1').item.json['Telefono Agente'] }}",
+        "textBody": "=No existen actividades pendientes para la OS {{ $('Orden editor1').item.json.Orden }}. Servicio terminado",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        -2560,
+        2448
+      ],
+      "id": "fa08e2a7-3b52-40fb-8b23-919ace2dddbc",
+      "name": "Servicio Terminado Agente",
+      "webhookId": "d834d80f-1776-481a-a773-9529d6cc890c"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c211a4bb-0c5a-40d8-b4e7-35b5c2212c4b",
+              "leftValue": "={{ $json['Telefono Agente'].indexOf($json['Telefono Persona Inicia Orden'].slice(-10)) }}\n",
+              "rightValue": -1,
+              "operator": {
+                "type": "number",
+                "operation": "notEquals"
+              }
+            },
+            {
+              "id": "f900aa52-f3cd-420a-b99f-bf090f6628f2",
+              "leftValue": "={{ $json['Telefono Responsable'].indexOf($json['Telefono Persona Inicia Orden'].slice(-10)) }}",
+              "rightValue": -1,
+              "operator": {
+                "type": "number",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -4688,
+        2416
+      ],
+      "id": "13edcffa-2f09-454d-99d0-75c8819e038d",
+      "name": "User Not Authorized"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "922902700900527",
+        "recipientPhoneNumber": "={{ $json['Telefono Persona Inicia Orden'] }}",
+        "textBody": "=Número Telefónico Inválido en OS {{ $json.Orden }}\n\nDispatcher: {{ $json['Telefono Agente'] }}\nLider Operativo: {{ $json['Telefono Responsable'] }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        -4464,
+        2640
+      ],
+      "id": "22a93ce4-83fa-4be3-b08c-e8bdb2e42465",
+      "name": "Numero Invalido de Agente o Responsable",
+      "webhookId": "16033987-9a53-44ac-97b6-05bca8072e9d"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "001f2455-3f8f-4bfd-884a-364a6a7e67e2",
+              "leftValue": "={{ !Number.isNaN(Number($json['Telefono Agente'])) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "0147f880-5441-4c06-9551-ed4ecb97ae04",
+              "leftValue": "={{ !Number.isNaN(Number($json['Telefono Responsable'])) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -4464,
+        2416
+      ],
+      "id": "d1d46c0b-09c0-46be-a7d0-246958db7479",
+      "name": "Invalid Agent or Responsible Number"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "dc97e56d-3527-4e30-ac24-c5798a2b228c",
+              "name": "Reporte Final",
+              "value": "data",
+              "type": "binary"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1856,
+        2848
+      ],
+      "id": "3460d3bd-98d7-41b9-bb58-cb656719bf04",
+      "name": "Reporte",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "922902700900527",
+        "recipientPhoneNumber": "={{ $('Orden editor1').item.json['Telefono Responsable']\n}}",
+        "messageType": "document",
+        "mediaPath": "useMedian8n",
+        "mediaPropertyName": "Reporte Final",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        -1680,
+        2848
+      ],
+      "id": "3e0e8af4-053f-4634-94ab-23866299840a",
+      "name": "PDF Reporte",
+      "webhookId": "37ae51c5-f7f3-447e-ae15-7e5d99759840",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "subject": "=Reporte Final OS {{ $('Orden editor1').item.json.Orden }}",
+        "emailType": "text",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {
+                "property": "Reporte Final"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -1856,
+        3056
+      ],
+      "id": "45614650-331d-4670-b851-724f999cf597",
+      "name": "Send a message",
+      "webhookId": "afcf0fd0-cda9-46af-8191-57534b444b31",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "content": "## Generacion de Reporte\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n## Generacion de reporte con url",
+        "height": 832,
+        "width": 1456,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -2848,
+        2384
+      ],
+      "typeVersion": 1,
+      "id": "846a29c5-c999-4ba5-a73a-373e06353499",
+      "name": "Sticky Note14"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('SAI Obtener Ordenes Principal').item.json.media_link }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -2048,
+        2848
+      ],
+      "id": "ecd475c5-8e07-4bce-90c7-a7507be85dab",
+      "name": "HTTP Reporte Final",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "content": "## Generacion de Reporte\n\n1. WhatsApp - Mensaje con descripcion de orden finalizada a responsable de la orden y agente.\n2. HTTP - Se hace un request al url para obtener el documento PDF del reporte final\n3. WhatsApp - Mensaje con el documento PDF del reporte final de ejecución. \n4. Gmail - Se manda un email con el documento PDF a la persona correspondiente. \n",
+        "height": 416,
+        "width": 384,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -3248,
+        2384
+      ],
+      "typeVersion": 1,
+      "id": "a5235d29-5072-4ef3-b833-5f2f2e1fc5f4",
+      "name": "Sticky Note15"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://stg.saiv3api.imagendinamica.mx/api/login",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "email",
+              "value": "ext-n8n1@imagendinamica.com"
+            },
+            {
+              "name": "password",
+              "value": "@7q7dU5(\"bH1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2368,
+        2448
+      ],
+      "id": "0aa10659-07d5-4200-bf0d-45a300a1f246",
+      "name": "SAI Autenticacion1",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "url": "=https://stg.saiv3api.imagendinamica.mx/api/serviceorders/{{ $('Orden editor1').item.json.Orden }}/executioninfo?current_act=1 ",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization ",
+              "value": "=Bearer  {{ $json.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2192,
+        2448
+      ],
+      "id": "95a0123f-69e4-4043-a2d5-1260039306b7",
+      "name": "SAI Obtener Ordenes Principal1",
+      "retryOnFail": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "sendTo": "rodezayas@gmail.com",
+        "subject": "=Reporte Final OS {{ $('Orden editor1').item.json.Orden }}",
+        "message": ".",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {
+                "property": "Reporte Final"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -1648,
+        2624
+      ],
+      "id": "f52ccc39-d5cc-4dd9-97dd-f27f67f021f2",
+      "name": "Send a message1",
+      "webhookId": "afcf0fd0-cda9-46af-8191-57534b444b31",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "671fd58d-2fa8-4a0f-a410-6401f5b900ee",
+              "name": "Reporte Final",
+              "value": "data",
+              "type": "binary"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1840,
+        2448
+      ],
+      "id": "cd5ce11b-f564-4b3f-bd0e-a958c6c4fdaa",
+      "name": "Reporte Final"
+    },
+    {
+      "parameters": {
+        "content": "## Generacion de Reporte con URL\n\n1. WhatsApp - Mensaje con descripcion de orden finalizada a responsable de la orden y agente.\n2. HTTP - Se hace un request al url para obtener el documento PDF del reporte final\n3. WhatsApp - Mensaje con el documento PDF del reporte final de ejecución. \n4. Gmail - Se manda un email con el documento PDF a la persona correspondiente. \n",
+        "height": 400,
+        "width": 384,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -3248,
+        2816
+      ],
+      "typeVersion": 1,
+      "id": "45eb96f1-b0de-433c-aec0-14f9be63ab7c",
+      "name": "Sticky Note16"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Obtiene el Base64 \nlet base64String = $input.item.json.content_base64;\n\n// 2. Limpieza profunda (quita encabezados y espacios)\nconst cleanBase64 = base64String.replace(/^data:application\\/pdf;base64,/, \"\").replace(/\\s/g, \"\");\n\n// 3. Convierte a Buffer\nconst buffer = Buffer.from(cleanBase64, 'base64');\n\n// 4. Crea el binario que n8n entiende como ARCHIVO\nconst binaryData = await this.helpers.prepareBinaryData(buffer, 'reporte_ejecucion_final.pdf', 'application/pdf');\n\nreturn {\n  json: { \n    resultado: \"Archivo listo\",\n    nombre: \"Reporte_final.pdf\" \n  },\n  binary: {\n    data: binaryData // 'data' es el nombre de la \"caja\" que contiene el PDF\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2016,
+        2448
+      ],
+      "id": "7bc01444-539a-49a9-aa27-2e4edb43eb26",
+      "name": "Obtiene el PDF --> Base64 - PDF"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "922902700900527",
+        "recipientPhoneNumber": "={{ $('Orden editor1').item.json['Telefono Responsable'] }}",
+        "messageType": "document",
+        "mediaPath": "useMedian8n",
+        "mediaPropertyName": "Reporte Final",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        -1680,
+        2448
+      ],
+      "id": "dd307019-e43a-40ef-93d4-78601a7c4413",
+      "name": "PDF Reporte Responsable",
+      "webhookId": "37ae51c5-f7f3-447e-ae15-7e5d99759840"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "922902700900527",
+        "recipientPhoneNumber": "={{ $('Orden editor1').item.json['Telefono Agente'] }}",
+        "messageType": "document",
+        "mediaPath": "useMedian8n",
+        "mediaPropertyName": "Reporte Final",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        -1520,
+        2448
+      ],
+      "id": "af53b90a-0a58-473f-9698-d0848c2b251e",
+      "name": "PDF Reporte Agente",
+      "webhookId": "37ae51c5-f7f3-447e-ae15-7e5d99759840"
+    }
+  ],
+  "pinData": {
+    "Trigger Inicio": [
+      {
+        "json": {
+          "headers": {
+            "host": "idinamica.app.n8n.cloud",
+            "user-agent": "axios/1.12.0",
+            "content-length": "368",
+            "accept": "application/json,text/html,application/xhtml+xml,application/xml,text/*;q=0.9, image/*;q=0.8, */*;q=0.7",
+            "accept-encoding": "gzip, br",
+            "cdn-loop": "cloudflare; loops=1; subreqs=1",
+            "cf-connecting-ip": "4.184.78.252",
+            "cf-ew-via": "15",
+            "cf-ipcountry": "DE",
+            "cf-ray": "9bb74bb692145ada-FRA",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-worker": "n8n.cloud",
+            "content-type": "application/json",
+            "x-forwarded-for": "4.184.78.252, 172.70.240.31",
+            "x-forwarded-host": "idinamica.app.n8n.cloud",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "traefik-prod-users-gwc-82-6b58d578cf-wmj82",
+            "x-is-trusted": "yes",
+            "x-real-ip": "4.184.78.252"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "contacts": [
+              {
+                "profile": {
+                  "name": "Rodrigo"
+                },
+                "wa_id": "5214427920802"
+              }
+            ],
+            "metadata": {
+              "display_phone_number": "5215575053279",
+              "phone_number_id": "922902700900527"
+            },
+            "messages": [
+              {
+                "from": "5214427920802",
+                "id": "wamid.HBgNNTIxNDQyNzkyMDgwMhUCABIYIEE1OEQ3ODE2RDUxNjhCOERGRjM2RjhGQjA2RTdBQUY2AA==",
+                "timestamp": "1767996950",
+                "text": {
+                  "body": "208840"
+                },
+                "type": "text"
+              }
+            ],
+            "field": "messages"
+          },
+          "webhookUrl": "https://idinamica.app.n8n.cloud/webhook/0bedddb8-8991-4eaa-bce0-4fee99efa07a",
+          "executionMode": "production"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Validacion por IA": {
+      "main": [
+        [
+          {
+            "node": "Fotografia o Texto",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fotografia o Texto 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields4": {
+      "main": [
+        [
+          {
+            "node": "Se puede trabajar en la actividad?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Se puede trabajar en la actividad?": {
+      "main": [
+        [
+          {
+            "node": "Validacion por IA",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Razon de NO proceder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate2": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Datos Estandar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "SAI Autenticacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SAI Autenticacion": {
+      "main": [
+        [
+          {
+            "node": "SAI Obtener Ordenes Principal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Datos Estandar": {
+      "main": [
+        [
+          {
+            "node": "Hay Actividad por realizar?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SAI Autenticacion3": {
+      "main": [
+        [
+          {
+            "node": "SAI Registro de actividades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SAI Autenticacion5": {
+      "main": [
+        [
+          {
+            "node": "SAI Registro de actividades1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SAI Registro de actividades": {
+      "main": [
+        [
+          {
+            "node": "Status registrado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hay Actividad por realizar?": {
+      "main": [
+        [
+          {
+            "node": "Validacion Cita Zoho",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Servicio Terminado Responsable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate1": {
+      "main": [
+        [
+          {
+            "node": "Message Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status Validacion IA": {
+      "main": [
+        [
+          {
+            "node": "SAI Autenticacion5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensaje con descripcion de actividad y solicitud de evidencia al tecnico1": {
+      "main": [
+        [
+          {
+            "node": "Upload media3",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IA - Validacion6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensaje con descripcion de actividad y solicitud de evidencia al tecnico2": {
+      "main": [
+        [
+          {
+            "node": "Upload media",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SAI Registro de actividades1": {
+      "main": [
+        [
+          {
+            "node": "Validacion exitosa1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SAI Autenticacion6": {
+      "main": [
+        [
+          {
+            "node": "SAI Registro de actividades2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SAI Registro de actividades2": {
+      "main": [
+        [
+          {
+            "node": "Mensaje Tecnico Evidencia Registrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status Validacion Cap": {
+      "main": [
+        [
+          {
+            "node": "SAI Autenticacion6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload media": {
+      "main": [
+        [
+          {
+            "node": "Download media1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download media1": {
+      "main": [
+        [
+          {
+            "node": "Frwrd Evidencia Agente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fotografia o Texto": {
+      "main": [
+        [
+          {
+            "node": "Msj descripcion y solicitud de evidencia 1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mensaje con descripcion de actividad y solicitud de evidencia al tecnico4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensaje con descripcion de actividad y solicitud de evidencia al tecnico4": {
+      "main": [
+        [
+          {
+            "node": "Documentacion Validacion Tx",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SAI Autenticacion7": {
+      "main": [
+        [
+          {
+            "node": "SAI Registro de actividades3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SAI Registro de actividades3": {
+      "main": [
+        [
+          {
+            "node": "Validacion exitosa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensaje Tecnico Evidencia Registrada": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Documentacion Validacion Tx": {
+      "main": [
+        [
+          {
+            "node": "Validacion Texto - SAI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SAI Autenticacion2": {
+      "main": [
+        [
+          {
+            "node": "SAI Obtener Participantes Relevantes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Arranque de orden1": {
+      "main": [
+        [
+          {
+            "node": "SAI Autenticacion",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Falso Inicio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Orden editor1": {
+      "main": [
+        [
+          {
+            "node": "User Not Authorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener orden": {
+      "main": [
+        [
+          {
+            "node": "SAI Autenticacion2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SAI Obtener Ordenes Principal": {
+      "main": [
+        [
+          {
+            "node": "Aggregate2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validacion Cita Zoho": {
+      "main": [
+        [
+          {
+            "node": "Cita Iniciada Zoho",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Iniciar cita Zoho": {
+      "main": [
+        [
+          {
+            "node": "Actividad General y FSM Field ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evidencia Zoho IMG": {
+      "main": [
+        [
+          {
+            "node": "Cerrar Cita Zoho",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evidencia Zoho Txt": {
+      "main": [
+        [
+          {
+            "node": "Cerrar Cita Zoho1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evidencia Zoho IMG1": {
+      "main": [
+        [
+          {
+            "node": "Cerrar Cita Zoho2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IA - Validacion": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zoho Jobsheet ID": {
+      "main": [
+        [
+          {
+            "node": "Cerrar Cita Zoho3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cita Iniciada Zoho": {
+      "main": [
+        [
+          {
+            "node": "Actividad General y FSM Field ID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Iniciar cita Zoho",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SAI Autenticacion8": {
+      "main": [
+        [
+          {
+            "node": "SAI Registro de actividades4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SAI Registro de actividades4": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cerrar Cita Zoho": {
+      "main": [
+        [
+          {
+            "node": "Status Validacion IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cerrar Cita Zoho1": {
+      "main": [
+        [
+          {
+            "node": "SAI Autenticacion7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cerrar Cita Zoho2": {
+      "main": [
+        [
+          {
+            "node": "Status Validacion Cap",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Terminar Cita Zoho": {
+      "main": [
+        [
+          {
+            "node": "SAI Autenticacion3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cerrar Cita Zoho3": {
+      "main": [
+        [
+          {
+            "node": "SAI Autenticacion8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evidencia Zoho Txt2": {
+      "main": [
+        [
+          {
+            "node": "Cerrar Cita Zoho4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SAI Autenticacion9": {
+      "main": [
+        [
+          {
+            "node": "SAI Registro de actividades5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cerrar Cita Zoho4": {
+      "main": [
+        [
+          {
+            "node": "SAI Autenticacion9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SAI Registro de actividades5": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check If Order is Valid": {
+      "main": [
+        [
+          {
+            "node": "Obtener orden",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Orden Invalida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Order Not Found": {
+      "main": [
+        [
+          {
+            "node": "Orden editor1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Orden No Existe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Foto / Texto": {
+      "main": [
+        [
+          {
+            "node": "Zoho Jobsheet ID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Evidencia Zoho Txt2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validacion Texto - SAI": {
+      "main": [
+        [
+          {
+            "node": "Evidencia Zoho Txt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download media": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Upload media1": {
+      "main": [
+        [
+          {
+            "node": "Download media",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Validacion Foto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Imagen con URL": {
+      "main": [
+        [
+          {
+            "node": "Evidencia Zoho IMG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Msj descripcion y solicitud de evidencia 1": {
+      "main": [
+        [
+          {
+            "node": "IA - Validacion",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Upload media1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fotografia o Texto 2": {
+      "main": [
+        [
+          {
+            "node": "Mensaje con descripcion de actividad y solicitud de evidencia al tecnico4",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mensaje con descripcion de actividad y solicitud de evidencia al tecnico2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validacion Foto": {
+      "main": [
+        [
+          {
+            "node": "Obtener Imagen con URL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mensaje con descripcion de actividad y solicitud de evidencia al tecnico1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actividad General y FSM Field ID": {
+      "main": [
+        [
+          {
+            "node": "Foto / Texto",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Msj Al Tecnico con descripcion de actividad",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensaje con descripcion de actividad y solicitud de evidencia al tecnico3": {
+      "main": [
+        [
+          {
+            "node": "Upload media4",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IA - Validacion7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IA - Validacion6": {
+      "main": [
+        [
+          {
+            "node": "Merge5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download media3": {
+      "main": [
+        [
+          {
+            "node": "Merge5",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Upload media3": {
+      "main": [
+        [
+          {
+            "node": "Download media3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge5": {
+      "main": [
+        [
+          {
+            "node": "Validacion Foto2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validacion Foto2": {
+      "main": [
+        [
+          {
+            "node": "Obtener Imagen con URL1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mensaje con descripcion de actividad y solicitud de evidencia al tecnico3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IA - Validacion7": {
+      "main": [
+        [
+          {
+            "node": "Merge6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download media4": {
+      "main": [
+        [
+          {
+            "node": "Merge6",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Upload media4": {
+      "main": [
+        [
+          {
+            "node": "Download media4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge6": {
+      "main": [
+        [
+          {
+            "node": "Validacion Foto3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Imagen con URL1": {
+      "main": [
+        [
+          {
+            "node": "Evidencia Zoho IMG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validacion Foto3": {
+      "main": [
+        [
+          {
+            "node": "Obtener Imagen con URL2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mensaje con descripcion de actividad y solicitud de evidencia al tecnico2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Imagen con URL2": {
+      "main": [
+        [
+          {
+            "node": "Evidencia Zoho IMG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Imagen con URL3": {
+      "main": [
+        [
+          {
+            "node": "Evidencia Zoho IMG1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensaje de Inicio de Orden": {
+      "main": [
+        [
+          {
+            "node": "Arranque de orden1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger Inicio": {
+      "main": [
+        [
+          {
+            "node": "Aggregate1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message Body": {
+      "main": [
+        [
+          {
+            "node": "Mensaje debe ser Numero",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensaje debe ser Numero": {
+      "main": [
+        [
+          {
+            "node": "Check If Order is Valid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Msj Al Tecnico con descripcion de actividad": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Razon de NO proceder": {
+      "main": [
+        [
+          {
+            "node": "Terminar Cita Zoho",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status registrado": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Msj a Agente para validar evidencia": {
+      "main": [
+        [
+          {
+            "node": "actividad valida? (Si/no)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "actividad valida? (Si/no)": {
+      "main": [
+        [
+          {
+            "node": "Obtener Imagen con URL3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Msj al tecnico / motivo de no validacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Msj al tecnico / motivo de no validacion": {
+      "main": [
+        [
+          {
+            "node": "Upload media",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validacion exitosa": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validacion exitosa1": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Frwrd Evidencia Agente": {
+      "main": [
+        [
+          {
+            "node": "Msj a Agente para validar evidencia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Template Inicio de Ejecucion": {
+      "main": [
+        [
+          {
+            "node": "Mensaje de Inicio de Orden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SAI Obtener Participantes Relevantes": {
+      "main": [
+        [
+          {
+            "node": "Order Not Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Servicio Terminado Responsable": {
+      "main": [
+        [
+          {
+            "node": "Servicio Terminado Agente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "User Not Authorized": {
+      "main": [
+        [
+          {
+            "node": "Invalid Agent or Responsible Number",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Autorizado Para Iniciar Ejecucion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Invalid Agent or Responsible Number": {
+      "main": [
+        [
+          {
+            "node": "Template Inicio de Ejecucion",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Numero Invalido de Agente o Responsable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Servicio Terminado Agente": {
+      "main": [
+        [
+          {
+            "node": "SAI Autenticacion1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reporte": {
+      "main": [
+        [
+          {
+            "node": "PDF Reporte",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Reporte Final": {
+      "main": [
+        [
+          {
+            "node": "Reporte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SAI Autenticacion1": {
+      "main": [
+        [
+          {
+            "node": "SAI Obtener Ordenes Principal1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SAI Obtener Ordenes Principal1": {
+      "main": [
+        [
+          {
+            "node": "Obtiene el PDF --> Base64 - PDF",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Reporte Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reporte Final": {
+      "main": [
+        [
+          {
+            "node": "PDF Reporte Responsable",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtiene el PDF --> Base64 - PDF": {
+      "main": [
+        [
+          {
+            "node": "Reporte Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PDF Reporte Responsable": {
+      "main": [
+        [
+          {
+            "node": "PDF Reporte Agente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "9ca368df-1be7-408c-aa5b-b531c156cd9c",
+  "meta": {
+    "instanceId": "0f2b7acf1a4c6b0ee0cc3c6681475c3188c6e94dc05c18b6edd0443ba38705aa"
+  },
+  "id": "JI5t5kfyxLlNTIG3",
+  "tags": []
+}

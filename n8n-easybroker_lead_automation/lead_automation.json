@@ -1,0 +1,826 @@
+{
+  "name": "RealEstate - Lead Management",
+  "nodes": [
+    {
+      "parameters": {
+        "fieldToSplitOut": "content",
+        "include": "allOtherFields",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        656
+      ],
+      "id": "06bff891-ca85-4596-8bf2-9a79bf5189f8",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "content"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -256,
+        656
+      ],
+      "id": "65791bdf-109f-46a9-8aee-1c61f3a0a9c9",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "url": "https://api.easybroker.com/v1/contacts",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "=search[updated_after]",
+              "value": "={{ $now.minus({ minutes: 60 }).toISO() }} "
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Authorization",
+              "value": "fq4my1jip2dicd5wl5w7mqvqx0rdg6"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -576,
+        656
+      ],
+      "id": "c5b43a35-ccb2-4690-844d-8a53e0155b1d",
+      "name": "EasyBroker"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3c611692-18de-4491-81c0-3104aea11d2a",
+              "name": "Contacto 1",
+              "value": "={{ $json.content[0] }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "a5e2d98c-28fc-441d-91f2-828bcb54cae1",
+      "name": "Contacto 1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e9b3e07f-d0a1-4fbf-b3e4-f153cfb2d72c",
+              "name": "Contacto 2",
+              "value": "={{ $json.content[1] }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        144
+      ],
+      "id": "96b48e40-d9d9-4b68-883b-7493c278e65c",
+      "name": "Contacto 2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c98fe31e-66ca-40ae-97f1-3fb4b04192de",
+              "name": "content[0]",
+              "value": "={{ $json.content[3] }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        272
+      ],
+      "id": "efb9597d-a0c3-434e-8172-79fc7d9cfb3e",
+      "name": "Contacto 3"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d2c84700-61a1-4e9c-9108-c8eddbc12b13",
+              "name": "content[0]",
+              "value": "={{ $json.content[4] }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        416
+      ],
+      "id": "ef9942dc-e152-4d1a-a909-ec85ea3a24fc",
+      "name": "Contacto 4"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e336c325-92e7-48f4-a0dc-665ef95ac644",
+              "name": "content[0]",
+              "value": "={{ $json.content[5] }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        560
+      ],
+      "id": "21004fef-824a-4827-a0ae-0e1b5c639a8b",
+      "name": "Contacto 5"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3c611692-18de-4491-81c0-3104aea11d2a",
+              "name": "Contacto 1",
+              "value": "={{ $json.content[6] }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        720
+      ],
+      "id": "7ddf02f2-4995-419f-a470-de020acb4865",
+      "name": "Contacto 6"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e9b3e07f-d0a1-4fbf-b3e4-f153cfb2d72c",
+              "name": "Contacto 2",
+              "value": "={{ $json.content[7] }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        864
+      ],
+      "id": "4cd0191c-6228-473d-96f0-0a0bc73b9dfb",
+      "name": "Contacto 7"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c98fe31e-66ca-40ae-97f1-3fb4b04192de",
+              "name": "content[0]",
+              "value": "={{ $json.content[8] }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        1008
+      ],
+      "id": "3f0fea90-6ae5-4917-b36d-7058ddcf555f",
+      "name": "Contacto 8"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d2c84700-61a1-4e9c-9108-c8eddbc12b13",
+              "name": "content[0]",
+              "value": "={{ $json.content[9] }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        1152
+      ],
+      "id": "7d0ed0f2-5455-40ce-86da-22b5f9fc9283",
+      "name": "Contacto 9"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a8c2c7ad-c9a2-4616-86ae-da68d7b03fa4",
+              "name": "content[0]",
+              "value": "={{ $json.content[10] }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        1296
+      ],
+      "id": "13179c2e-6c1a-4b9a-b15a-618c68437b3a",
+      "name": "Contacto 10"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1f84d0a5-927b-45ce-82ef-c631459a8037",
+              "name": "content",
+              "value": "={{ $json.content }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        448,
+        672
+      ],
+      "id": "d54d8528-2e41-4c8d-81f1-c9d649d36395",
+      "name": "Contacto Estandar"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor (const item of $input.all()) {\n  item.json.myNewField = 1;\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        304,
+        672
+      ],
+      "id": "14a61127-c8ec-4968-9f56-4c65a4e39b13",
+      "name": "Estandarizacion"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -736,
+        656
+      ],
+      "id": "fcc19e84-f81d-46a5-b8e7-4469b87b31eb",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1pQ3t2jjHmqtuzLoC8tv-WFBIn1x78yTJKxFFPxRgtxs",
+          "mode": "list",
+          "cachedResultName": "master_dataset",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1pQ3t2jjHmqtuzLoC8tv-WFBIn1x78yTJKxFFPxRgtxs/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 852697557,
+          "mode": "list",
+          "cachedResultName": "dataset_emails.csv",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1pQ3t2jjHmqtuzLoC8tv-WFBIn1x78yTJKxFFPxRgtxs/edit#gid=852697557"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "titulo",
+              "displayName": "titulo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "website",
+              "displayName": "website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "telefono",
+              "displayName": "telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ubicacion",
+              "displayName": "ubicacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Contact",
+              "displayName": "Last Contact",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "useAppend": true
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        624,
+        672
+      ],
+      "id": "77f95c3d-3918-4d7f-9aef-37d21297cb2b",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xZrJNQBTNR10CH8E",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "EasyBroker": [
+      {
+        "json": {
+          "pagination": {
+            "limit": 20,
+            "page": 1,
+            "total": 2,
+            "next_page": null
+          },
+          "content": [
+            {
+              "id": 20152441,
+              "full_name": "Juan Camaney",
+              "email": "heavymetal@gmail.com",
+              "phone": "442 343 4545",
+              "agent": "Rodrigo Zayas",
+              "source": null,
+              "created_at": "2026-02-19T13:41:12-06:00",
+              "updated_at": "2026-02-19T13:41:12-06:00"
+            },
+            {
+              "id": 20152452,
+              "full_name": "Mr Crownley",
+              "email": "caguasaki@gmail.com",
+              "phone": "442 123 2424",
+              "agent": "Rodrigo Zayas",
+              "source": null,
+              "created_at": "2026-02-19T13:41:55-06:00",
+              "updated_at": "2026-02-19T13:41:55-06:00"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Contacto 1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Contacto 2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Contacto 3",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Contacto 4",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Contacto 5",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Contacto 6",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Contacto 7",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Contacto 8",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Contacto 9",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Contacto 10",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EasyBroker": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contacto 1": {
+      "main": [
+        [
+          {
+            "node": "Aggregate All Contacts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Estandarizacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contacto 2": {
+      "main": [
+        [
+          {
+            "node": "Aggregate All Contacts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Estandarizacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contacto 3": {
+      "main": [
+        [
+          {
+            "node": "Aggregate All Contacts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Estandarizacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contacto 4": {
+      "main": [
+        [
+          {
+            "node": "Aggregate All Contacts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Estandarizacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contacto 5": {
+      "main": [
+        [
+          {
+            "node": "Aggregate All Contacts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Estandarizacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contacto 6": {
+      "main": [
+        [
+          {
+            "node": "Aggregate All Contacts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Estandarizacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contacto 7": {
+      "main": [
+        [
+          {
+            "node": "Aggregate All Contacts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Estandarizacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contacto 8": {
+      "main": [
+        [
+          {
+            "node": "Aggregate All Contacts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Estandarizacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contacto 9": {
+      "main": [
+        [
+          {
+            "node": "Aggregate All Contacts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Estandarizacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contacto 10": {
+      "main": [
+        [
+          {
+            "node": "Aggregate All Contacts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Estandarizacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contacto Estandar": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Estandarizacion": {
+      "main": [
+        [
+          {
+            "node": "Contacto Estandar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate All Contacts": {
+      "main": [
+        [
+          {
+            "node": "Unified Contact Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unified Contact Wait": {
+      "main": [
+        [
+          {
+            "node": "Estandarizacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "EasyBroker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "be77e450-5513-4ce5-8ad3-8715d416a9ba",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0f2b7acf1a4c6b0ee0cc3c6681475c3188c6e94dc05c18b6edd0443ba38705aa"
+  },
+  "id": "8JHuFpxD004amKjz",
+  "tags": []
+}

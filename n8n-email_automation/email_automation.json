@@ -1,0 +1,2940 @@
+{
+  "name": "Extractor de Datos 2",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyX",
+              "value": 15,
+              "unit": "minutes"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {},
+        "options": {
+          "dataPropertyAttachmentsPrefixName": "data",
+          "downloadAttachments": true
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -6816,
+        2144
+      ],
+      "id": "17e0730b-d284-432e-ae23-6eda8ff0a115",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "DljII3dYIWU80hLD",
+          "name": "Cuenta Solicitud Servicios (servicios) Gmail"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "tables",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -6544,
+        2144
+      ],
+      "id": "bc04f841-5084-48f2-8ada-b4d292fe535c",
+      "name": "Split Out",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -6416,
+        2144
+      ],
+      "id": "4fc6c26c-306f-4a1d-82e5-e3707462f916",
+      "name": "Aggregate",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "Eres un asistente experto en la extracción de datos.\nTu rol es extraer informacion relevante sobre la solicitud de servicios en los correos. ",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=Eres un asistente experto en la extracción de datos.\nTu rol es extraer toda la informacion relevante sobre la solicitud de servicios en los correos. \nEstos son los headers de las tablas: {{ $json.Headers }}\nExtrae los datos que van en los header dentro de: {{ $json['Datos de Servicio '] }}\nSi existe un dato vacio o no conoces cual es, omite llenar ese campo. ",
+          "passthroughBinaryImages": true
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -6112,
+        2144
+      ],
+      "id": "c9ea8ac9-f0bb-48da-88c9-9844d36aa86e",
+      "name": "AI Agent1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -6240,
+        2384
+      ],
+      "id": "15e86b54-4032-4a74-8fd6-7fae57497866",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "zYUG89DVjYhcaX8q",
+          "name": "IDin OpenAI Account"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "gmailparser"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -5984,
+        2384
+      ],
+      "id": "40c5646a-ff9a-4292-84f5-10dacfbb2c4c",
+      "name": "Simple Memory1",
+      "disabled": true
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1.3,
+      "position": [
+        -6112,
+        2384
+      ],
+      "id": "dd2c52b7-1690-4438-ae7d-24a006e048c7",
+      "name": "Code Tool1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const html = $input.first().json.html;\n\nif (!html) {\n  return [{ json: { error: \"No HTML found\" } }];\n}\n\n// Extraer todas las tablas\nconst tableMatches = html.match(/<table[\\s\\S]*?<\\/table>/gi) || [];\n\nconst tables = tableMatches.map(tableHtml => {\n  const rows = [];\n  const rowMatches = tableHtml.match(/<tr[\\s\\S]*?<\\/tr>/gi) || [];\n\n  rowMatches.forEach(rowHtml => {\n    const cells = [];\n    const cellMatches = rowHtml.match(/<(td|th)[\\s\\S]*?<\\/(td|th)>/gi) || [];\n\n    cellMatches.forEach(cell => {\n      const text = cell\n        .replace(/<[^>]+>/g, '')\n        .replace(/\\s+/g, ' ')\n        .trim();\n      cells.push(text);\n    });\n\n    if (cells.length) rows.push(cells);\n  });\n\n  return rows;\n});\n\nreturn [{\n  json: {\n    tables,\n    tablesFound: tables.length\n  }\n}];\n\n\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -6672,
+        2144
+      ],
+      "id": "0f18144c-2208-4974-853c-b907c5e04223",
+      "name": "Extractor de Tablas",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b2b3cf16-33e1-47fe-af56-1a9cec2db3ef",
+              "name": "Contacto",
+              "value": "={{ $('Gmail Trigger').item.json.from.value[0].address }}",
+              "type": "string"
+            },
+            {
+              "id": "4dcbd77c-11b4-4999-b0c3-7c2c94053376",
+              "name": "Nombre",
+              "value": "={{ $('Gmail Trigger').item.json.from.value[0].name }}",
+              "type": "string"
+            },
+            {
+              "id": "00df9bef-8d0e-423e-81b2-6863dd663c23",
+              "name": "Asunto",
+              "value": "={{ $('Gmail Trigger').item.json.headers.subject }}",
+              "type": "string"
+            },
+            {
+              "id": "bda34a64-454b-436b-b540-3003d71d7fe0",
+              "name": "Headers",
+              "value": "={{ $json.data[1]['0'] }}",
+              "type": "array"
+            },
+            {
+              "id": "053ec23a-5a44-47dc-bd9c-aa79d7a7ae15",
+              "name": "Datos de Servicio ",
+              "value": "={{ $json.data[1]['1'] }}",
+              "type": "array"
+            },
+            {
+              "id": "760a8aed-d178-4f52-9e9a-2a7751be4a3b",
+              "name": "Datos de Servicio 2",
+              "value": "={{ $json.data[1]['2'] }}",
+              "type": "array"
+            },
+            {
+              "id": "6879c154-5d79-4e3d-bd49-7379a7bac78a",
+              "name": "Datos de Servicio 3",
+              "value": "={{ $json.data[1]['3'] }}",
+              "type": "array"
+            },
+            {
+              "id": "f00f17a9-b782-4c64-a483-27f53b0cc76d",
+              "name": "Datos de Servicio 4",
+              "value": "={{ $json.data[1]['4'] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -6272,
+        2144
+      ],
+      "id": "1bb5ef9f-4e10-4f65-9502-0e196dedadd4",
+      "name": "Estandar de Datos de Servicio",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "content": "## Pt 1 \n\nFunciona pero no es capaz de procesar varias tablas",
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -7104,
+        2112
+      ],
+      "typeVersion": 1,
+      "id": "ca976fab-e8bb-4320-a420-589fe2f08267",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "e8fqEJQVhng6TymD",
+          "mode": "list",
+          "cachedResultName": "test - Eml extractor",
+          "cachedResultUrl": "/projects/oiwUU0i2OdV5vY9E/datatables/e8fqEJQVhng6TymD"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "colonia",
+              "displayName": "colonia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "calle",
+              "displayName": "calle",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ciudad",
+              "displayName": "ciudad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "marca",
+              "displayName": "marca",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -5792,
+        2048
+      ],
+      "id": "0d958b4a-f266-4fcf-b28b-27b53d44e9c6",
+      "name": "Insert row",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyHour"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {},
+        "options": {
+          "dataPropertyAttachmentsPrefixName": "attachment_0",
+          "downloadAttachments": true
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -4656,
+        5200
+      ],
+      "id": "6bfc5f43-7528-40c6-a830-f63505721100",
+      "name": "Gmail Trigger2",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "DljII3dYIWU80hLD",
+          "name": "Cuenta Solicitud Servicios (servicios) Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "tables",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -3536,
+        4912
+      ],
+      "id": "d9664330-2865-4c53-8e80-ed9d80c98618",
+      "name": "Split Out1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "Eres un asistente experto en la extracción de datos.\nTu rol es extraer informacion relevante sobre la solicitud de servicios en los correos.  ",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=Eres un asistente experto en la extracción de datos.\nTu rol es extraer toda la informacion relevante sobre la solicitud de servicios en los correos. \nEstos son los titulos de los servicios de cada celda: {{ $('Rows / Columnas').item.json.Headers }}\nExtrae los datos que van en los headers dentro de: {{ $json.services }}\nUtiliza tu parser para llenar los campos correspondientes.\nLos campos podrian venir en Español, usa el campo en Ingles del parser para el llenado correcto.\n\n\nSi existe un dato vacio o no conoces cual es, omite llenar ese campo o inventar los campos. ",
+          "passthroughBinaryImages": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -1392,
+        4880
+      ],
+      "id": "c9d06f3c-03fe-47be-9359-13230a09bb05",
+      "name": "AI Agent",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -1360,
+        5104
+      ],
+      "id": "5cb221d7-e8bd-485e-8ed0-1c0e64ce4fa0",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "zYUG89DVjYhcaX8q",
+          "name": "IDin OpenAI Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "gmailparser",
+        "contextWindowLength": 50
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -1504,
+        5104
+      ],
+      "id": "287979b9-2b9a-4730-a688-937edc40cc64",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n   \"service_order\":{\n      \"customer_id\":\"BANORTE\",\n      \"so_type_id\":\"TRANSPORTE\",\n      \"so_service_id\":\"SUMINISTRO\",\n      \"so_customer_folio\":\"ACTIVACION\",\n      \"so_requested_date\":\"2026-02-25\",\n      \"so_requested_time\":\"09:00:00\"\n   },\n   \"implantador\":{\n      \"email\":\"juan.perez@banorte.com\",\n      \"firstname\":\"Juan\",\n      \"midname\":\"\",\n      \"lastname\":\"Perez\",\n      \"mother_lastname\":\"Perez\"\n   },\n   \"origin\":{\n      \"loc_type\":null,\n      \"ext_loc_id\":null,\n      \"location_name\":null,\n      \"addr_street\":null,\n      \"addr_extnum\":null,\n      \"addr_intnum\":null,\n      \"neighborhood\":null,\n      \"city\":null,\n      \"county\":null,\n      \"zip_code\":null\n   },\n   \"destination\":{\n      \"loc_type\":\"NOMINA\",\n      \"ext_loc_id\":\"841\",\n      \"location_name\":\"UASLP\",\n      \"addr_street\":\"CIRCUITO VILLA DE GUADALUPE\",\n      \"addr_extnum\":\"S/N\",\n      \"addr_intnum\":null,\n      \"neighborhood\":\"VILLAS DEL PEDREGAL\",\n      \"city\":\"SAN LUIS POTOSI\",\n      \"county\":\"SAN LUIS POTOSI\",\n      \"zip_code\":\"78218\"\n   },\n   \"equipment\":[\n      {\n         \"serialNumber\":\"YK0722024\",\n         \"inv_status\":\"EN SERVICIO\",\n         \"inv_type\":\"CAJERO\",\n         \"inv_subtype\":\"ATM\",\n         \"inv_brand\":\"HYOSUNG\",\n         \"inv_model\":\"5700\",\n         \"id_externo\":\"N40301\",\n         \"ext_carga\":\"FRONTAL\",\n         \"ext_nombre\":\"EDIF. ADMIN MERIDA-1\",\n         \"comments\":\"A una cuadra de las oficinas de CFE\"\n      }\n   ],\n   \"requirements\":[\n      {\n         \"requirement\":\"Documentación base\",\n         \"comment\":\"INE Credencial Idin\"\n      }\n   ]\n}",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -1232,
+        5104
+      ],
+      "id": "77556fd4-e95a-4c39-9add-c6c118c433f9",
+      "name": "Structured Output Parser",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"ID\": \"1245\",\n  \"clave de ubicacion\":\"1234\",\n  \"cliente\": \"BBVA\",\n  \"servicio\": \"Retiro y Anclaje\",\n  \"subactividad\":\"Retiro\",\n  \"estado\": \"California\",\n  \"ciudad\": \"Los Angeles\",\n  \"colonia\": \"San Joaquin\",\n  \"calle\": \"Bermuda\",\n  \"lugar\": \"\",\n  \"nombre del sitio\":\"San Fercho\",\n  \"C.P\": \"76121\",\n  \"municipio\":\"Hernandez San Pablo\",\n  \"marca\": \"Samsung\",\n  \"modelo\": \"M-123\",\n  \"No.Serie\": \"123\",\n  \"fecha de servicio\": \"12-12-23\",\n  \"hora de servicio\": \"1:23\"\n}",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -5856,
+        2288
+      ],
+      "id": "63fcf9af-7636-4db7-a222-ccfcf7b5b0d4",
+      "name": "Structured Output Parser2",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -3360,
+        4912
+      ],
+      "id": "fe3e9535-b64e-4d35-9fb3-fe4842abe68a",
+      "name": "Aggregate1"
+    },
+    {
+      "parameters": {
+        "amount": 3
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -2112,
+        4896
+      ],
+      "id": "7f7add91-ae3a-4042-b415-4e67258081dd",
+      "name": "Wait",
+      "webhookId": "24fc8f9e-6d7d-44df-ae20-8983b903f741"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "51776e9c-216f-4d2b-838c-ff448baf4452",
+              "name": "Datos de servicio 16",
+              "value": "={{ $json['Datos de servicio 16'] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2496,
+        4528
+      ],
+      "id": "0f4568ee-790c-4a76-b48c-c939667df4bd",
+      "name": "Servicios 1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const output = [];\n\nfor (const item of items) {\n\n  const source = item.json;\n\n  let foundArrays = [];\n\n  for (const key in source) {\n    if (Array.isArray(source[key])) {\n      foundArrays = foundArrays.concat(source[key]);\n    }\n  }\n\n  output.push({\n    json: {\n      services: foundArrays,\n      totalFound: foundArrays.length\n    }\n  });\n\n}\n\nreturn output;\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1968,
+        4896
+      ],
+      "id": "ac515e48-b94a-4e1d-9a14-05f043fe4957",
+      "name": "Estandarizacion de Arrays"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ac60e7b1-7094-4668-b7bd-17f80adca1e7",
+              "name": "Datos de servicio 17",
+              "value": "={{ $json['Datos de servicio 17'] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2496,
+        4704
+      ],
+      "id": "4eecc240-91a9-44e0-8ee0-b3ae77eb3ebc",
+      "name": "Servicios 2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "161416d0-489b-45ae-9ebc-955599e6b450",
+              "name": "services",
+              "value": "={{ $json.services }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1792,
+        4896
+      ],
+      "id": "fb654978-f83e-41d5-b06a-7d585dbc9f1d",
+      "name": "Array Final"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ac60e7b1-7094-4668-b7bd-17f80adca1e7",
+              "name": "Datos de servicio 18",
+              "value": "={{ $json['Datos de servicio 18'] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2496,
+        4880
+      ],
+      "id": "4197b988-1972-45fb-931a-bd259a367b06",
+      "name": "Servicios "
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ac60e7b1-7094-4668-b7bd-17f80adca1e7",
+              "name": "Datos de servicio 19",
+              "value": "={{ $json['Datos de servicio 19'] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2496,
+        5056
+      ],
+      "id": "80e014db-26ca-4ea1-8300-1e71fa12a1ed",
+      "name": "Servicios 3"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ac60e7b1-7094-4668-b7bd-17f80adca1e7",
+              "name": "Datos de servicio 20",
+              "value": "={{ $json['Datos de servicio 20'] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2496,
+        5232
+      ],
+      "id": "773f9733-397b-4c63-a2ed-29d2325b83ca",
+      "name": "Servicios 4"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "51776e9c-216f-4d2b-838c-ff448baf4452",
+              "name": "Datos de servicio 21",
+              "value": "={{ $json['Datos de servicio 21'] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2496,
+        5408
+      ],
+      "id": "a662eef4-f0b4-40f0-976c-53635758ba51",
+      "name": "Servicios 5"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ac60e7b1-7094-4668-b7bd-17f80adca1e7",
+              "name": "Datos de servicio 22",
+              "value": "={{ $json['Datos de servicio 22'] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2496,
+        5616
+      ],
+      "id": "78d0ecd3-beeb-4be1-b04b-12e345d554a4",
+      "name": "Servicios 6"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ac60e7b1-7094-4668-b7bd-17f80adca1e7",
+              "name": "Datos de servicio 23",
+              "value": "={{ $json['Datos de servicio 23'] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2496,
+        5808
+      ],
+      "id": "63717f0e-4f14-4925-8eb4-b4e3d2063da8",
+      "name": "Servicios 7"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ac60e7b1-7094-4668-b7bd-17f80adca1e7",
+              "name": "Datos de servicio 24",
+              "value": "={{ $json['Datos de servicio 24'] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2496,
+        6016
+      ],
+      "id": "2ca4d053-dcc2-489f-b46a-c2189deba770",
+      "name": "Servicios 8"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ac60e7b1-7094-4668-b7bd-17f80adca1e7",
+              "name": "Datos de servicio 25",
+              "value": "={{ $json['Datos de servicio 25'] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2496,
+        6208
+      ],
+      "id": "2475c181-c894-47ed-bbf4-d1c6a0a21b7f",
+      "name": "Servicios 9"
+    },
+    {
+      "parameters": {
+        "text": "=Eres un asistente experto en la extracción de datos específicos.  Tu rol es extraer todo lo que venga dentro de: {{ $json.services }}.\nLos campos podrian venir en Espanol, usa el campo en Ingles del parser para el llenado correcto.",
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n   \"service_order\":{\n      \"customer_id\":\"BANORTE\",\n      \"so_type_id\":\"TRANSPORTE\",\n      \"so_service_id\":\"SUMINISTRO\",\n      \"so_customer_folio\":\"ACTIVACION\",\n      \"so_requested_date\":\"2026-02-25\",\n      \"so_requested_time\":\"09:00:00\"\n   },\n   \"implantador\":{\n      \"email\":\"juan.perez@banorte.com\",\n      \"firstname\":\"Juan\",\n      \"midname\":\"\",\n      \"lastname\":\"Perez\",\n      \"mother_lastname\":\"Perez\"\n   },\n   \"origin\":{\n      \"loc_type\":null,\n      \"ext_loc_id\":null,\n      \"location_name\":null,\n      \"addr_street\":null,\n      \"addr_extnum\":null,\n      \"addr_intnum\":null,\n      \"neighborhood\":null,\n      \"city\":null,\n      \"county\":null,\n      \"zip_code\":null\n   },\n   \"destination\":{\n      \"loc_type\":\"NOMINA\",\n      \"ext_loc_id\":\"841\",\n      \"location_name\":\"UASLP\",\n      \"addr_street\":\"CIRCUITO VILLA DE GUADALUPE\",\n      \"addr_extnum\":\"S/N\",\n      \"addr_intnum\":null,\n      \"neighborhood\":\"VILLAS DEL PEDREGAL\",\n      \"city\":\"SAN LUIS POTOSI\",\n      \"county\":\"SAN LUIS POTOSI\",\n      \"zip_code\":\"78218\"\n   },\n   \"equipment\":[\n      {\n         \"serialNumber\":\"YK0722024\",\n         \"inv_status\":\"EN SERVICIO\",\n         \"inv_type\":\"CAJERO\",\n         \"inv_subtype\":\"ATM\",\n         \"inv_brand\":\"HYOSUNG\",\n         \"inv_model\":\"5700\",\n         \"id_externo\":\"N40301\",\n         \"ext_carga\":\"FRONTAL\",\n         \"ext_nombre\":\"EDIF. ADMIN MERIDA-1\",\n         \"comments\":\"A una cuadra de las oficinas de CFE\"\n      }\n   ],\n   \"requirements\":[\n      {\n         \"requirement\":\"Documentación base\",\n         \"comment\":\"INE Credencial Idin\"\n      }\n   ]\n}",
+        "options": {
+          "systemPromptTemplate": "Eres un experto en algoritmos de extracción.\nExtrae únicamente la información relevante del texto.\nSi desconoces el valor de un atributo que se te pide extraer, puedes omitirlo."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        -1056,
+        4896
+      ],
+      "id": "d6d1d94e-44f5-4717-af3b-f5600113f034",
+      "name": "Information Extractor",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -896,
+        5184
+      ],
+      "id": "6335918a-3b56-49f0-8079-05dfa916675b",
+      "name": "OpenAI Chat Model4",
+      "credentials": {
+        "openAiApi": {
+          "id": "zYUG89DVjYhcaX8q",
+          "name": "IDin OpenAI Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "51776e9c-216f-4d2b-838c-ff448baf4452",
+              "name": "Datos de servicio 0 - 1",
+              "value": "={{ $json['Datos de Servicio 1 '] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2496,
+        2384
+      ],
+      "id": "feed09cc-5dbb-4f54-8977-315ba3e1654b",
+      "name": "Servicio Array 0 -1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "51776e9c-216f-4d2b-838c-ff448baf4452",
+              "name": "Datos de servicio 0 - 2",
+              "value": "={{ $json['Datos de Servicio 2'] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2496,
+        2528
+      ],
+      "id": "ca036c6d-63e8-4f5f-b438-e0ecd1bf8d3e",
+      "name": "Servicio Array 0 -"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fd1760d7-a8c1-4ac8-a340-a2b7aeb2583f",
+              "name": "Datos de Servicio 0 - 3",
+              "value": "={{ $json['Datos de Servicio 3'] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2496,
+        2672
+      ],
+      "id": "3489dac1-ef6c-47d6-a7e0-10b37ddde271",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e778e2b8-9312-4583-9341-3d74e30de08a",
+              "name": "Datos de servicio 0 - 4",
+              "value": "={{ $json['Datos de Servicio 4'] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2496,
+        2816
+      ],
+      "id": "68cbf59b-d147-420a-8dd5-e01f2c77b3fa",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7b8c5a07-b3b4-4e4c-8e57-554ad048bb4b",
+              "name": "Datos de Servicio 0 - 5",
+              "value": "={{ $json['Datos de servicio  5'] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2496,
+        2976
+      ],
+      "id": "ba4a9f6c-504f-4a26-adfa-f0e2d366fa2e",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7b8c5a07-b3b4-4e4c-8e57-554ad048bb4b",
+              "name": "Datos de Servicio 0 - 6",
+              "value": "={{ $json['Datos de servicio  6'] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2496,
+        3120
+      ],
+      "id": "e25ca40c-c64f-4045-a1a3-81a3edb68b67",
+      "name": "Edit Fields4"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7b8c5a07-b3b4-4e4c-8e57-554ad048bb4b",
+              "name": "Datos de Servicio 0 - 7",
+              "value": "={{ $json['Datos de servicio 7'] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2496,
+        3264
+      ],
+      "id": "3789123a-36f6-4e57-ac72-83901076eeb5",
+      "name": "Edit Fields5"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7b8c5a07-b3b4-4e4c-8e57-554ad048bb4b",
+              "name": "Datos de Servicio 0 - 8",
+              "value": "={{ $json['Datos de servicio 8'] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2496,
+        3424
+      ],
+      "id": "e22fe9cd-c456-4bf8-beba-d7198b02d6b3",
+      "name": "Edit Fields6"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7b8c5a07-b3b4-4e4c-8e57-554ad048bb4b",
+              "name": "Datos de Servicio 0 - 9",
+              "value": "={{ $json['Datos de servicio 9'] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2496,
+        3584
+      ],
+      "id": "0cbea1c1-be1b-4742-ac5b-188b7a2043b0",
+      "name": "Edit Fields7"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7b8c5a07-b3b4-4e4c-8e57-554ad048bb4b",
+              "name": "Datos de Servicio 0 - 10",
+              "value": "={{ $json['Datos de servicio 10'] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2496,
+        3728
+      ],
+      "id": "d6cd624f-3cbd-4163-a2e3-11941f5107be",
+      "name": "Edit Fields8"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "948ebc69-3b86-4daf-adb9-8274e5a759d2",
+              "leftValue": "={{ $json['Data HTML'] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -3008,
+        4912
+      ],
+      "id": "06914643-1b5d-4499-a6bf-9df9e0a6a77a",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "292e1078-fbbe-4894-aac1-bbf842d89874",
+              "name": "Datos de servicio 0 - 11",
+              "value": "={{ $json['Datos de servicio 11'] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2496,
+        3888
+      ],
+      "id": "7c844f75-6310-4d05-92c0-e11e931aa261",
+      "name": "Edit Fields10"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "aeef2b06-488e-4c6f-b802-69f81ce9d9db",
+              "leftValue": "={{ $json.services }}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1616,
+        4896
+      ],
+      "id": "3bd5a645-9eb5-49fa-971d-e133144f5311",
+      "name": "Array Vacio"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "292e1078-fbbe-4894-aac1-bbf842d89874",
+              "name": "Datos de servicio 0 - 12",
+              "value": "={{ $json['Datos de servicio 12'] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2496,
+        4048
+      ],
+      "id": "2269bcf3-bcf3-4e41-b4d3-aa7a0683b4bc",
+      "name": "Edit Fields44"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "df372496-3eb5-4cc7-90c5-f3c2227c08bc",
+              "name": "Datos de servicio 0 - 13",
+              "value": "={{ $json['Datos de servicio 13'] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2496,
+        4192
+      ],
+      "id": "726b1d96-b9cc-4109-994b-c457517929fa",
+      "name": "Edit Fields45"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9aac48fe-66a2-4b82-9dcf-6063d5868546",
+              "name": "Datos de servicio 0 - 15",
+              "value": "={{ $json['Datos de servicio 15'] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2496,
+        4336
+      ],
+      "id": "3a336968-5055-4e9a-bc32-1b8ebfe28c06",
+      "name": "Edit Fields46"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c61c4d24-fa08-47f3-a656-03fabce3ce2e",
+              "name": "Datos de servicio 26",
+              "value": "={{ $json['Datos de servicio 26'] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2496,
+        6400
+      ],
+      "id": "a74759b0-3ca9-4d2a-8af9-9c0cab86eb6d",
+      "name": "Edit Fields47"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c61c4d24-fa08-47f3-a656-03fabce3ce2e",
+              "name": "Datos de servicio 27",
+              "value": "={{ $json['Datos de servicio 27'] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2496,
+        6592
+      ],
+      "id": "9fdb57df-ac29-462c-89e9-60787976b312",
+      "name": "Edit Fields48"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c61c4d24-fa08-47f3-a656-03fabce3ce2e",
+              "name": "Datos de servicio 28",
+              "value": "={{ $json['Datos de servicio 28'] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2496,
+        6768
+      ],
+      "id": "755be3cb-7b59-4505-9c71-e488dc1c98e2",
+      "name": "Edit Fields49"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c61c4d24-fa08-47f3-a656-03fabce3ce2e",
+              "name": "Datos de servicio 29",
+              "value": "={{ $json['Datos de servicio 29'] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2496,
+        6944
+      ],
+      "id": "792e3ac3-5fe6-4fc0-8d87-a9fab4c86fee",
+      "name": "Edit Fields50"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c61c4d24-fa08-47f3-a656-03fabce3ce2e",
+              "name": "Datos de servicio 30",
+              "value": "={{ $json['Datos de servicio 30'] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2496,
+        7104
+      ],
+      "id": "f8045e06-ff76-4e86-96df-682a1d4a35b0",
+      "name": "Edit Fields51"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "826bd705-da12-49f7-8554-e45f148754b5",
+              "name": "Data HTML",
+              "value": "={{ $json.data }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -3184,
+        4912
+      ],
+      "id": "0e7325d0-7dec-4077-8b99-685ee7bd0bfb",
+      "name": "Estandar Data HTML"
+    },
+    {
+      "parameters": {
+        "jsCode": "const html = $('Gmail Trigger2').first().json.html\n\nif (!html) {\n  return [{ json: { error: \"No HTML found\" } }];\n}\n\n// Extraer todas las tablas\nconst tableMatches = html.match(/<table[\\s\\S]*?<\\/table>/gi) || [];\n\nconst tables = tableMatches.map(tableHtml => {\n  const rows = [];\n  const rowMatches = tableHtml.match(/<tr[\\s\\S]*?<\\/tr>/gi) || [];\n\n  rowMatches.forEach(rowHtml => {\n    const cells = [];\n    const cellMatches = rowHtml.match(/<(td|th)[\\s\\S]*?<\\/(td|th)>/gi) || [];\n\n    cellMatches.forEach(cell => {\n      const text = cell\n        .replace(/<[^>]+>/g, '')\n        .replace(/\\s+/g, ' ')\n        .trim();\n      cells.push(text);\n    });\n\n    if (cells.length) rows.push(cells);\n  });\n\n  return rows;\n});\n\nreturn [{\n  json: {\n    tables,\n    tablesFound: tables.length\n  }\n}];\n\n\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3872,
+        4912
+      ],
+      "id": "283679bb-dbd6-494e-8a6a-59cace07eadf",
+      "name": "Extractor de Tablas2"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -1616,
+        4736
+      ],
+      "id": "6c16aaa8-026c-4ac3-9a6b-0fa9d245bd6b",
+      "name": "No Operation, do nothing2"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -672,
+        4992
+      ],
+      "id": "a3721a5b-10fc-4a24-8e21-0c80270241d7",
+      "name": "No Operation, do nothing3"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9e3713b8-42b2-4d48-bd95-e60149c68960",
+              "name": "Asunto",
+              "value": "={{ $('Gmail Trigger2').first().json.subject }}",
+              "type": "string"
+            },
+            {
+              "id": "0bed1edd-2bf8-4e00-b455-9fe372bff781",
+              "name": "Contacto",
+              "value": "={{ $('Gmail Trigger2').first().json.from.value[0].address }}",
+              "type": "string"
+            },
+            {
+              "id": "e0e669a2-7b01-407a-869e-19f29001acbc",
+              "name": "Headers",
+              "value": "={{ $json['Data HTML'][0]['0'] }}",
+              "type": "array"
+            },
+            {
+              "id": "34639483-c2ad-49a7-bfa2-d7fd1b5344a5",
+              "name": "Datos de Servicio 1 ",
+              "value": "={{ $json['Data HTML'][0]['1'] }}",
+              "type": "array"
+            },
+            {
+              "id": "435861e3-74e0-42ca-9eb6-dc709655a24c",
+              "name": "Datos de Servicio 2",
+              "value": "={{ $json['Data HTML'][0]['2'] }}",
+              "type": "array"
+            },
+            {
+              "id": "7d83f90f-c2e6-4778-8f3a-32f1880acc78",
+              "name": "Datos de Servicio 3",
+              "value": "={{ $json['Data HTML'][0]['3'] }}",
+              "type": "array"
+            },
+            {
+              "id": "1c99e090-4c30-4f3b-be96-583f5d0512d3",
+              "name": "Datos de servicio 4",
+              "value": "={{ $json['Data HTML'][0]['4'] }}",
+              "type": "array"
+            },
+            {
+              "id": "6f5d31e7-6e4d-4b2c-93ad-459e4b0ce704",
+              "name": "Datos de servicio  5",
+              "value": "={{ $json['Data HTML'][0]['5'] }}",
+              "type": "array"
+            },
+            {
+              "id": "ae681617-ea18-460d-9f12-4bfc52d127fb",
+              "name": "Datos de servicio  6",
+              "value": "={{ $json['Data HTML'][0]['6'] }}",
+              "type": "array"
+            },
+            {
+              "id": "722732c3-0d68-482a-a809-ea11c8d94950",
+              "name": "Datos de servicio 7",
+              "value": "={{ $json['Data HTML'][0]['7'] }}",
+              "type": "array"
+            },
+            {
+              "id": "b2b7f2d8-cd1d-4ff5-a51b-032666bde382",
+              "name": "Datos de servicio 8",
+              "value": "={{ $json['Data HTML'][0]['8'] }}",
+              "type": "array"
+            },
+            {
+              "id": "797eb5ae-864d-48f0-b3c9-b3abf829e284",
+              "name": "Datos de servicio 9",
+              "value": "={{ $json['Data HTML'][0]['9'] }}",
+              "type": "array"
+            },
+            {
+              "id": "4d58ffb7-919b-4b7f-8fe5-3620f901f0b6",
+              "name": "Datos de servicio 10",
+              "value": "={{ $json['Data HTML'][0]['10'] }}",
+              "type": "array"
+            },
+            {
+              "id": "dd91eaf5-4780-4445-a328-c84974a29157",
+              "name": "Datos de servicio 11",
+              "value": "={{ $json['Data HTML'][0]['11'] }}",
+              "type": "array"
+            },
+            {
+              "id": "6f3e6e75-2409-4a3f-9a54-291b34bf3ce2",
+              "name": "Datos de servicio 12",
+              "value": "={{ $json['Data HTML'][0]['12'] }}",
+              "type": "array"
+            },
+            {
+              "id": "3fa17046-a806-4cde-9687-13d868f9604c",
+              "name": "Datos de servicio 13",
+              "value": "={{ $json['Data HTML'][0]['13'] }}",
+              "type": "array"
+            },
+            {
+              "id": "1d240080-e86a-4b48-ba3e-d8d47fa05bec",
+              "name": "Datos de servicio 14",
+              "value": "={{ $json['Data HTML'][0]['14'] }}",
+              "type": "array"
+            },
+            {
+              "id": "8dda0b40-1350-4b56-b04e-29feb844fbd1",
+              "name": "Datos de servicio 15",
+              "value": "={{ $json['Data HTML'][0]['15'] }}",
+              "type": "array"
+            },
+            {
+              "id": "230d0649-3fed-4864-b483-d062dc9035cf",
+              "name": "Datos de servicio 16",
+              "value": "={{ $json['Data HTML'][0]['16'] }}",
+              "type": "array"
+            },
+            {
+              "id": "2dcf3ed8-ee30-4e90-8bed-f117df9d3c9f",
+              "name": "Datos de servicio 17",
+              "value": "={{ $json['Data HTML'][0]['17'] }}",
+              "type": "array"
+            },
+            {
+              "id": "2fd80c39-4aea-4c1f-a192-b538502d5e03",
+              "name": "Datos de servicio 18",
+              "value": "={{ $json['Data HTML'][0]['18'] }}",
+              "type": "array"
+            },
+            {
+              "id": "6cd50d0f-dcce-498c-aa5d-75fad60d664e",
+              "name": "Datos de servicio 19",
+              "value": "={{ $json['Data HTML'][0]['19'] }}",
+              "type": "array"
+            },
+            {
+              "id": "211813ed-0bb7-4840-a820-0c7abe11870c",
+              "name": "Datos de servicio 20",
+              "value": "={{ $json['Data HTML'][0]['20'] }}",
+              "type": "array"
+            },
+            {
+              "id": "0a233517-f513-4a93-8463-938873d501c4",
+              "name": "Datos de servicio 21",
+              "value": "={{ $json['Data HTML'][0]['21'] }}",
+              "type": "array"
+            },
+            {
+              "id": "7aa682fa-6c64-4e55-b82e-f0f8309acb61",
+              "name": "Datos de servicio 22",
+              "value": "={{ $json['Data HTML'][0]['22'] }}",
+              "type": "array"
+            },
+            {
+              "id": "6f92dca1-fdd3-490f-8548-a2477238d0f3",
+              "name": "Datos de servicio 23",
+              "value": "={{ $json['Data HTML'][0]['23'] }}",
+              "type": "array"
+            },
+            {
+              "id": "f004b6dd-ca0a-4fd1-8c09-a89fed593226",
+              "name": "Datos de servicio 24",
+              "value": "={{ $json['Data HTML'][0]['24'] }}",
+              "type": "array"
+            },
+            {
+              "id": "9ffb4e03-60d7-4755-a47e-1e0ae6689851",
+              "name": "Datos de servicio 25",
+              "value": "={{ $json['Data HTML'][0]['25'] }}",
+              "type": "array"
+            },
+            {
+              "id": "328ef7b0-8a2e-4957-b90a-eceea4ffbb26",
+              "name": "Datos de servicio 26",
+              "value": "={{ $json['Data HTML'][0]['26'] }}",
+              "type": "array"
+            },
+            {
+              "id": "0cc3710a-ebe9-4258-a331-4247434a116e",
+              "name": "Datos de servicio 27",
+              "value": "={{ $json['Data HTML'][0]['27'] }}",
+              "type": "array"
+            },
+            {
+              "id": "2cf94db5-1887-46c9-b1a1-ca9342f87f6a",
+              "name": "Datos de servicio 28",
+              "value": "={{ $json['Data HTML'][0]['28'] }}",
+              "type": "array"
+            },
+            {
+              "id": "338e3e74-d375-4b32-a84e-88cdc4c86eab",
+              "name": "Datos de servicio 29",
+              "value": "={{ $json['Data HTML'][0]['29'] }}",
+              "type": "array"
+            },
+            {
+              "id": "96182b2b-d089-4330-8bd6-b3a6ddc5b3e6",
+              "name": "Datos de servicio 30",
+              "value": "={{ $json['Data HTML'][0]['30'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2832,
+        4896
+      ],
+      "id": "8e6e04f9-bfc2-49d5-9546-50364b5ec241",
+      "name": "Rows / Columnas"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "597d34ef-3e59-45ae-9332-bab584d295c2",
+              "leftValue": "={{ $json.message }}",
+              "rightValue": "No se encontraron archivos .xlsx",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "783ce364-d35b-43a5-8d33-93f290f8c896",
+              "leftValue": "={{ $json.message }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -4048,
+        4928
+      ],
+      "id": "6c9ab7e3-11e3-45b5-aed8-97cd8e288f95",
+      "name": "If1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -4032,
+        5568
+      ],
+      "id": "5fe1dc6c-652a-4b3e-bfcd-8a0d14e4f80c",
+      "name": "No Operation, do nothing"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.SAIv3_URLbase_stg }}/login",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "email",
+              "value": "ext-n8n1@imagendinamica.com"
+            },
+            {
+              "name": "password",
+              "value": "@7q7dU5(\"bH1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -4032,
+        5200
+      ],
+      "id": "ef6b954f-3ba7-4355-b919-f3339169c846",
+      "name": "SAI Autenticacion",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c5973f16-cd87-4ba4-837a-bd49830ba54e",
+              "name": "OS_Servicio",
+              "value": "attachment",
+              "type": "binary"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -4032,
+        5376
+      ],
+      "id": "ca2331eb-0ab8-4d9a-93f9-a26e2d5da091",
+      "name": "xlsx",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filtra solo items con binario .xlsx y normaliza la key a \"attachment\"\n\nconst results = [];\n\nfor (const item of $input.all()) {\n  const binaryData = item.binary || {};\n\n  for (const key of Object.keys(binaryData)) {\n    const bin = binaryData[key];\n    const filename = bin.fileName || \"\";\n    const mimeType = bin.mimeType || \"\";\n\n    if (!filename.toLowerCase().endsWith(\".xlsx\")) continue;\n    if (mimeType && mimeType.toLowerCase().indexOf(\"spreadsheetml\") === -1) continue;\n\n    results.push({\n      json: item.json,\n      binary: {\n        attachment: bin\n      }\n    });\n    break;\n  }\n}\n\nif (results.length === 0) {\n  return [{ json: { message: \"No se encontraron archivos .xlsx\" } }];\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4480,
+        5200
+      ],
+      "id": "128f26bb-8082-44f1-92c1-0d87852663e7",
+      "name": "Extractor xlsx"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://stg.saiv3api.imagendinamica.mx/api/serviceorders/readexcelorder",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "={\n  \"Accept\": \"application/json\",\n  \"Authorization\": \"Bearer {{ $json.access_token }}\"\n} ",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "template file",
+              "inputDataFieldName": "OS_Servicio"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -3680,
+        5296
+      ],
+      "id": "716c44ff-df75-46d8-b59b-2583608964b1",
+      "name": "Conector xlsx",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.SAIv3_URLbase_stg }}/login",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "email",
+              "value": "ext-n8n1@imagendinamica.com"
+            },
+            {
+              "name": "password",
+              "value": "@7q7dU5(\"bH1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -672,
+        4640
+      ],
+      "id": "db392541-7a86-4713-b2a7-c582b4d888a5",
+      "name": "SAI Autenticacion1",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.SAIv3_URLbase_stg }}/serviceorders/readjsonorder",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "={\n  \"Accept\": \"application/json\",\n  \"Authorization\": \"Bearer {{ $json.access_token }}\"\n} ",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $('AI Agent').item.json.output }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -512,
+        4640
+      ],
+      "id": "0f362bb3-5279-472b-be95-d27b12dd4ef4",
+      "name": "Conector Validacion Json",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -3008,
+        5168
+      ],
+      "id": "cc06ef72-b333-4e1f-beb4-bb3bf6dcee12",
+      "name": "No Operation, do nothing1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Tomar todos los items del nodo anterior\nconst inputItems = $input.all();\n\nconst result = [];\n\ninputItems.forEach((item, index) => {\n  const tables = item.json.tables;\n  const tablesFound = item.json.tablesFound;\n\n  result.push({\n    json: {\n      tables,\n      tablesFound\n    }\n  });\n});\n\n// Reindexar desde 0 (n8n ya lo hace automáticamente, pero forzamos el orden)\nreturn result.map((item, i) => ({\n  ...item,\n  // El índice en n8n será automáticamente 0, 1, 2...\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3696,
+        4912
+      ],
+      "id": "e8b32ec8-3349-4b90-b16b-a44ff4a08dd2",
+      "name": "Estandarizador de Columnas"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -4320,
+        4928
+      ],
+      "id": "11d7cae4-7490-4417-8ba2-9a2fa3355219",
+      "name": "No Operation, do nothing4"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -3856,
+        5296
+      ],
+      "id": "f22a894e-2750-46d8-a13c-704f4a18d359",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Extrae el contenido en:{{ $json.error.message }}. Crea una resumen y enumera los puntos faltantes de forma concisa para mandar un correo. \nEjemplo Output: Hay campos obligatorios que faltan y deben completarse para procesar la orden.\\n\\nPuntos faltantes (obligatorios):\\n- service_order:\\n - customer_id\\n - so_type_id\\n - so_service_id\\n - so_customer_folio\\n- implantador:\\n - email\\n - firstname\\n - lastname\\n - mother_lastname\\n- equipment[0]:\\n - inv_status\\n - inv_brand\\n - inv_model\\n\\nPor favor proporcionar los valores de los campos indicados para poder continuar con el procesamiento.\n\n",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -272,
+        4688
+      ],
+      "id": "cb705f0c-9ef9-4a60-a307-46e83ce4d281",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -176,
+        4816
+      ],
+      "id": "fa632487-0af6-4146-aece-8bed7a9362c8",
+      "name": "OpenAI Chat Model2",
+      "credentials": {
+        "openAiApi": {
+          "id": "zYUG89DVjYhcaX8q",
+          "name": "IDin OpenAI Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Rows / Columnas').item.json.Contacto }}",
+        "subject": "Campos Obligatorios Faltantes",
+        "emailType": "text",
+        "message": "={{ $json.text }}",
+        "options": {
+          "appendAttribution": false,
+          "replyToSenderOnly": true
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        16,
+        4688
+      ],
+      "id": "b0a1f569-8a18-4bf2-822f-4131e24da910",
+      "name": "Send a message",
+      "webhookId": "6815c3ef-8c53-40d3-a752-f4e3be728e23",
+      "executeOnce": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "DljII3dYIWU80hLD",
+          "name": "Cuenta Solicitud Servicios (servicios) Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Extrae el contenido en:{{ $json.error.message }}. Crea una resumen y enumera los puntos faltantes de forma concisa para mandar un correo. \nEjemplo Output: Hay campos obligatorios que faltan y deben completarse para procesar la orden.\\n\\nPuntos faltantes (obligatorios):\\n- service_order:\\n - customer_id\\n - so_type_id\\n - so_service_id\\n - so_customer_folio\\n- implantador:\\n - email\\n - firstname\\n - lastname\\n - mother_lastname\\n- equipment[0]:\\n - inv_status\\n - inv_brand\\n - inv_model\\n\\nPor favor proporcionar los valores de los campos indicados para poder continuar con el procesamiento.\n\n",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -3440,
+        5312
+      ],
+      "id": "7a6e5329-d863-4a27-9770-d7edcd2b908d",
+      "name": "Basic LLM Chain1"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -3440,
+        5456
+      ],
+      "id": "7397d91b-0748-40e4-a526-7f0de1440b0d",
+      "name": "OpenAI Chat Model3",
+      "credentials": {
+        "openAiApi": {
+          "id": "zYUG89DVjYhcaX8q",
+          "name": "IDin OpenAI Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Gmail Trigger2').item.json.from.value[0].address }}",
+        "subject": "Campos Obligatorios Faltantes",
+        "emailType": "text",
+        "message": "=Hola {{ $('Gmail Trigger2').item.json.from.value[0].name }}\n{{ $json.text }}",
+        "options": {
+          "appendAttribution": false,
+          "replyToSenderOnly": true
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -3184,
+        5312
+      ],
+      "id": "b07279e7-4d74-47c6-8a80-5413d44b4159",
+      "name": "Send a message1",
+      "webhookId": "6815c3ef-8c53-40d3-a752-f4e3be728e23",
+      "executeOnce": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "DljII3dYIWU80hLD",
+          "name": "Cuenta Solicitud Servicios (servicios) Gmail"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extractor de Tablas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Estandar de Datos de Servicio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Insert row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Structured Output Parser2",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory1": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Tool1": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extractor de Tablas": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Estandar de Datos de Servicio": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Trigger2": {
+      "main": [
+        [
+          {
+            "node": "Extractor xlsx",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out1": {
+      "main": [
+        [
+          {
+            "node": "Aggregate1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "SAI Autenticacion1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Information Extractor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Structured Output Parser",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser2": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate1": {
+      "main": [
+        [
+          {
+            "node": "Estandar Data HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Estandarizacion de Arrays",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Servicios 1": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Estandarizacion de Arrays": {
+      "main": [
+        [
+          {
+            "node": "Array Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Servicios 2": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Array Final": {
+      "main": [
+        [
+          {
+            "node": "Array Vacio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Servicios ": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Servicios 3": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Servicios 4": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Servicios 5": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Servicios 6": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Servicios 7": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Servicios 8": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Servicios 9": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Information Extractor": {
+      "main": [
+        [
+          {
+            "node": "SAI Autenticacion1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Information Extractor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Servicio Array 0 -1": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Servicio Array 0 -": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields4": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields5": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields6": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields7": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields8": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Rows / Columnas",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields10": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Array Vacio": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields44": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields45": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields46": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields47": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields48": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields49": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields50": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields51": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Estandar Data HTML": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extractor de Tablas2": {
+      "main": [
+        [
+          {
+            "node": "Estandarizador de Columnas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rows / Columnas": {
+      "main": [
+        [
+          {
+            "node": "Servicios 1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Servicios 2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Servicios ",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Servicios 3",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Servicios 4",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Servicios 5",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Servicios 6",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Servicios 7",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Servicios 8",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Servicios 9",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Servicio Array 0 -1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Servicio Array 0 -",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields4",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields5",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields6",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields7",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields8",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields10",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields44",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields45",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields46",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields47",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields48",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields49",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields50",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields51",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Extractor de Tablas2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No Operation, do nothing3": {
+      "main": [
+        []
+      ]
+    },
+    "SAI Autenticacion": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "xlsx": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extractor xlsx": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "SAI Autenticacion",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "xlsx",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SAI Autenticacion1": {
+      "main": [
+        [
+          {
+            "node": "Conector Validacion Json",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Estandarizador de Columnas": {
+      "main": [
+        [
+          {
+            "node": "Split Out1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Conector xlsx",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conector Validacion Json": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain1": {
+      "main": [
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conector xlsx": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Basic LLM Chain1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "0eca8405-0b3b-4f0b-adca-fb2d87c66f0f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e850d7b80c80a746054be2110b899058f627e4065fc04f586c728acdc177230e"
+  },
+  "id": "6N83GNOHRqnJIhSg",
+  "tags": []
+}
