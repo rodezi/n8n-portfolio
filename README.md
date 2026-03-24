@@ -1,6 +1,6 @@
 # n8n Automation Projects
 
-A collection of production n8n workflows built to automate real estate lead management, field service operations, and email outreach tracking. Each project targets a specific business process and integrates multiple external services through a centralized architecture.
+A collection of production n8n workflows built to automate real estate lead management, field service operations, email outreach tracking, and lead response. Each project targets a specific business process and integrates multiple external services through a centralized architecture.
 
 ---
 
@@ -44,16 +44,25 @@ A lightweight nightly workflow that keeps the **Google Sheets** master dataset i
 **Trigger:** Daily schedule (10:00 PM)
 **Output:** `Status` and `Last Contact` updated in the master dataset
 
+### 5. [Google Guaranteed Lead → SMS Automation](n8n-google-guaranted-leads/n8n-google-guaranted-leads.md)
+
+Monitors Gmail every minute for new **Google Local Services Ads (Google Guaranteed)** lead notifications. When a lead arrives, the workflow parses the HTML email to extract the contact's name, phone, and service type — normalizing the phone to E.164 format. It then deduplicates against a **Google Sheets** log, checks **business hours (US Eastern)**, and fires an immediate personalized **SMS via Twilio**. The lead is logged to the sheet and a confirmation email is sent to the client. If parsing fails, an alert is sent to the operator.
+
+**Key integrations:** Gmail, Twilio, Google Sheets
+**Trigger:** Gmail poll (every minute)
+**Output:** SMS sent to lead + row logged in Google Sheets + client notified by email
+
 ---
 
 ## Shared Infrastructure
 
-All four workflows share a common **Google Sheets master dataset** (`dataset_emails.csv`) as the central record of email leads. Each workflow interacts with it differently:
+Several workflows share a common **Google Sheets master dataset** (`dataset_emails.csv`) as the central record of email leads. Each workflow interacts with it differently:
 
 | Workflow | Operation | Match Key |
 |---|---|---|
 | Lead Automation | Append new leads | — |
 | Instantly Sheets | Update reply status | `email` |
+| Google Guaranteed Leads | Append contacted leads | `phone` |
 
 The **Internal System** (staging API) is used by both the Email Automation and Operation System workflows for authentication, order retrieval, and status recording.
 
@@ -65,7 +74,7 @@ The **Internal System** (staging API) is used by both the Email Automation and O
 |---|---|
 | Automation platform | n8n |
 | AI / LLM | OpenAI GPT-4.1-mini, GPT-4o, GPT-5-mini |
-| Communication | WhatsApp Business API, Gmail |
+| Communication | WhatsApp Business API, Gmail, Twilio SMS |
 | CRM / Outreach | EasyBroker, Instantly |
 | Field Service | Zoho FSM |
 | Data storage | Google Sheets |
