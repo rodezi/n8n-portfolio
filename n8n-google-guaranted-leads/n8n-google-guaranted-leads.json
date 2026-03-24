@@ -1,0 +1,275 @@
+{
+  "name": "Google Guaranteed Lead → SMS Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [{ "mode": "everyMinute" }]
+        },
+        "filters": {
+          "sender": "googlelocalbusiness-noreply@google.com",
+          "subject": "New lead"
+        },
+        "options": {
+          "dataPropertyAttachmentsPrefixName": "attachment_"
+        }
+      },
+      "id": "node-gmail-trigger",
+      "name": "Gmail Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1,
+      "position": [340, 60],
+      "credentials": {
+        "gmailOAuth2": { "id": "REPLACE_WITH_YOUR_GMAIL_CREDENTIAL_ID", "name": "Gmail OAuth2" }
+      },
+      "notes": "Polls Gmail every minute. For instant trigger, replace with Gmail Pub/Sub webhook via Google Cloud."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.from }}",
+              "operation": "contains",
+              "value2": "@google.com"
+            },
+            {
+              "value1": "={{ $json.subject }}",
+              "operation": "contains",
+              "value2": "lead"
+            }
+          ]
+        },
+        "combineOperation": "all"
+      },
+      "id": "node-if-google",
+      "name": "IF — From Google?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [340, 200]
+    },
+    {
+      "parameters": {
+        "functionCode": "// ─── Parse Google Guaranteed lead email ───\nconst html = $input.item.json.html || $input.item.json.text || '';\n\n// Helper: extract by label pattern\nfunction extract(html, label) {\n  const regex = new RegExp(label + '[^:]*:?\\\\s*</[^>]+>\\\\s*<[^>]+>([^<]+)', 'i');\n  const m = html.match(regex);\n  return m ? m[1].trim() : null;\n}\n\n// Extract fields\nlet name    = extract(html, 'Customer name') || extract(html, 'Name');\nlet phone   = extract(html, 'Phone') || extract(html, 'phone number');\nlet service = extract(html, 'Job type') || extract(html, 'Service') || extract(html, 'service requested');\nlet date    = extract(html, 'Date') || new Date().toISOString();\n\n// Fallback: regex scan entire body for phone\nif (!phone) {\n  const phoneMatch = html.match(/\\+?1?[\\s.-]?\\(?\\d{3}\\)?[\\s.-]?\\d{3}[\\s.-]?\\d{4}/);\n  phone = phoneMatch ? phoneMatch[0] : null;\n}\n\n// Normalize phone to E.164 (+1XXXXXXXXXX)\nif (phone) {\n  phone = phone.replace(/[^\\d+]/g, '');\n  if (!phone.startsWith('+')) {\n    phone = phone.length === 10 ? '+1' + phone : '+' + phone;\n  }\n}\n\nreturn [{\n  json: {\n    name:    name    || 'Unknown',\n    phone:   phone   || null,\n    service: service || 'General inquiry',\n    date:    date,\n    raw_subject: $input.item.json.subject,\n    parsed_ok: !!(name && phone)\n  }\n}];"
+      },
+      "id": "node-parse",
+      "name": "Code — Parse Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [340, 340]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.parsed_ok }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "node-if-valid",
+      "name": "IF — Phone Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [340, 480]
+    },
+    {
+      "parameters": {
+        "subject": "⚠️ Lead parsing failed — Google Guaranteed",
+        "message": "=Could not extract phone number from lead email.\n\nSubject: {{ $json.raw_subject }}\nTime: {{ $now }}\n\nCheck the workflow and review the email HTML structure.",
+        "options": {}
+      },
+      "id": "node-alert-parse",
+      "name": "Gmail — Parsing Alert",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [600, 480],
+      "credentials": {
+        "gmailOAuth2": { "id": "REPLACE_WITH_YOUR_GMAIL_CREDENTIAL_ID", "name": "Gmail OAuth2" }
+      },
+      "notes": "Set 'To' field to your notification email in Gmail node parameters."
+    },
+    {
+      "parameters": {
+        "operation": "lookup",
+        "documentId": { "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID" },
+        "sheetName": { "value": "Leads" },
+        "lookupColumn": "phone",
+        "lookupValue": "={{ $json.phone }}",
+        "options": { "returnAllMatches": false }
+      },
+      "id": "node-sheets-lookup",
+      "name": "Sheets — Check Duplicate",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [340, 620],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "REPLACE_WITH_YOUR_SHEETS_CREDENTIAL_ID", "name": "Google Sheets OAuth2" }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.phone }}",
+              "operation": "isEmpty"
+            }
+          ]
+        }
+      },
+      "id": "node-if-duplicate",
+      "name": "IF — Duplicate?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [340, 760],
+      "notes": "If Sheets lookup returned a row, phone exists → duplicate. True branch = not duplicate (proceed). Adjust condition based on your sheet structure."
+    },
+    {
+      "parameters": {
+        "functionCode": "// ─── Check business hours (US Eastern, Miami) ───\nconst now = new Date();\n\n// Convert to ET (UTC-5 standard / UTC-4 DST)\n// Simple offset — for production use a proper timezone library\nconst utcHour = now.getUTCHours();\nconst month = now.getUTCMonth() + 1;\nconst isDST = month >= 3 && month <= 11; // approx DST window\nconst etHour = (utcHour - (isDST ? 4 : 5) + 24) % 24;\nconst dayOfWeek = now.getUTCDay(); // 0=Sun, 6=Sat\n\nconst isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;\nconst isBusinessHours = etHour >= 8 && etHour < 20; // 8am–8pm ET\n\nreturn [{\n  json: {\n    ...$input.item.json,\n    send_now: isWeekday && isBusinessHours,\n    et_hour: etHour,\n    day_of_week: dayOfWeek\n  }\n}];"
+      },
+      "id": "node-hours",
+      "name": "Code — Check Business Hours",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [340, 900]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.send_now }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "node-if-hours",
+      "name": "IF — Business Hours?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [340, 1020]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "from": "REPLACE_WITH_YOUR_TWILIO_NUMBER",
+        "to": "={{ $json.phone }}",
+        "message": "=Hi {{ $json.name }}, this is [Business Name] — we received your request for {{ $json.service }}. When's a good time to connect? Reply here or call us at [PHONE]."
+      },
+      "id": "node-twilio-sms",
+      "name": "Twilio — Send SMS",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [340, 1160],
+      "credentials": {
+        "twilioApi": { "id": "REPLACE_WITH_YOUR_TWILIO_CREDENTIAL_ID", "name": "Twilio API" }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": { "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID" },
+        "sheetName": { "value": "Leads" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "timestamp":    "={{ $now }}",
+            "name":         "={{ $json.name }}",
+            "phone":        "={{ $json.phone }}",
+            "service":      "={{ $json.service }}",
+            "sms_sent":     "=true",
+            "sms_time":     "={{ $now }}",
+            "status":       "contacted"
+          }
+        }
+      },
+      "id": "node-sheets-log",
+      "name": "Sheets — Log Lead",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [340, 1300],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "REPLACE_WITH_YOUR_SHEETS_CREDENTIAL_ID", "name": "Google Sheets OAuth2" }
+      }
+    },
+    {
+      "parameters": {
+        "subject": "New lead contacted — {{ $json.name }}",
+        "message": "=New Google Guaranteed lead was automatically contacted.\n\nName: {{ $json.name }}\nPhone: {{ $json.phone }}\nService: {{ $json.service }}\nSMS sent at: {{ $now }}\n\nCheck your Google Sheet for the full log.",
+        "options": {}
+      },
+      "id": "node-notify-client",
+      "name": "Gmail — Notify Client",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [340, 1440],
+      "credentials": {
+        "gmailOAuth2": { "id": "REPLACE_WITH_YOUR_GMAIL_CREDENTIAL_ID", "name": "Gmail OAuth2" }
+      },
+      "notes": "Set 'To' to your client's email address."
+    }
+  ],
+  "connections": {
+    "Gmail Trigger": {
+      "main": [[{ "node": "IF — From Google?", "type": "main", "index": 0 }]]
+    },
+    "IF — From Google?": {
+      "main": [
+        [{ "node": "Code — Parse Email", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Code — Parse Email": {
+      "main": [[{ "node": "IF — Phone Valid?", "type": "main", "index": 0 }]]
+    },
+    "IF — Phone Valid?": {
+      "main": [
+        [{ "node": "Sheets — Check Duplicate", "type": "main", "index": 0 }],
+        [{ "node": "Gmail — Parsing Alert", "type": "main", "index": 0 }]
+      ]
+    },
+    "Sheets — Check Duplicate": {
+      "main": [[{ "node": "IF — Duplicate?", "type": "main", "index": 0 }]]
+    },
+    "IF — Duplicate?": {
+      "main": [
+        [{ "node": "Code — Check Business Hours", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Code — Check Business Hours": {
+      "main": [[{ "node": "IF — Business Hours?", "type": "main", "index": 0 }]]
+    },
+    "IF — Business Hours?": {
+      "main": [
+        [{ "node": "Twilio — Send SMS", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Twilio — Send SMS": {
+      "main": [[{ "node": "Sheets — Log Lead", "type": "main", "index": 0 }]]
+    },
+    "Sheets — Log Lead": {
+      "main": [[{ "node": "Gmail — Notify Client", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "tags": ["google-guaranteed", "leads", "sms", "twilio"],
+  "_meta": {
+    "instanceId": "google-guaranteed-lead-automation-v1",
+    "notes": "SETUP CHECKLIST — replace all REPLACE_WITH_ placeholders before activating:\n1. Gmail OAuth2 credential ID\n2. Google Sheets credential ID + Sheet ID\n3. Twilio credential ID + your Twilio phone number\n4. Set 'To' address in both Gmail nodes (alerts + client notification)\n5. Update SMS message template with real business name and phone\n6. Verify Google Guaranteed email sender address matches your client's actual emails\n7. Optional: replace Gmail Trigger with Pub/Sub webhook for instant delivery"
+  }
+}
+
+
