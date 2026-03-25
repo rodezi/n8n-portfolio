@@ -1,0 +1,508 @@
+{
+  "name": "Shopify Abandoned Checkout Recovery",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "shopify-checkout-update",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Shopify Checkout Update Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://{{ $vars.SHOPIFY_STORE_DOMAIN }}/admin/api/2024-01/graphql.json",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-Shopify-Access-Token", "value": "={{ $vars.SHOPIFY_ACCESS_TOKEN }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={\n  \"query\": \"{ abandonedCheckouts(first: 50) { edges { node { id name email createdAt abandonedCheckoutUrl totalPriceSet { shopMoney { amount currencyCode } } discountCodes lineItems(first: 10) { edges { node { title quantity originalUnitPrice { amount } } } } customer { id email firstName lastName numberOfOrders } } } } }\"\n}"
+      },
+      "id": "fetch-abandoned-checkouts",
+      "name": "Fetch Abandoned Checkouts (GraphQL)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [460, 300],
+      "credentials": {
+        "httpHeaderAuth": { "id": "YOUR_SHOPIFY_CREDENTIAL_ID", "name": "Shopify Header Auth" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const edges = $input.first().json.data.abandonedCheckouts.edges || [];\n\nreturn edges.map(edge => {\n  const node = edge.node;\n  const lineItems = node.lineItems.edges.map(e => ({\n    title: e.node.title,\n    quantity: e.node.quantity,\n    price: e.node.originalUnitPrice.amount\n  }));\n\n  return {\n    json: {\n      checkoutId: node.id,\n      checkoutName: node.name,\n      customerEmail: node.email,\n      customerFirstName: node.customer?.firstName || '',\n      customerLastName: node.customer?.lastName || '',\n      customerId: node.customer?.id || '',\n      totalPrice: node.totalPriceSet.shopMoney.amount,\n      currency: node.totalPriceSet.shopMoney.currencyCode,\n      discountCodes: node.discountCodes || [],\n      recoveryUrl: node.abandonedCheckoutUrl,\n      lineItems: lineItems,\n      lineItemsSummary: lineItems.map(i => `${i.title} x${i.quantity}`).join(', '),\n      createdAt: node.createdAt\n    }\n  };\n});"
+      },
+      "id": "extract-checkouts",
+      "name": "Extract & Format Checkouts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": { "__rl": true, "value": "YOUR_AIRTABLE_BASE_ID", "mode": "id" },
+        "table": { "__rl": true, "value": "abandonedCheckouts", "mode": "name" },
+        "filterByFormula": "={{ `{checkout_id} = '${$json.checkoutId}'` }}",
+        "options": { "fields": ["checkout_id"] }
+      },
+      "id": "check-airtable-dedup",
+      "name": "Check Airtable — Already Messaged?",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [900, 300],
+      "credentials": {
+        "airtableTokenApi": { "id": "YOUR_AIRTABLE_CREDENTIAL_ID", "name": "Airtable" }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.records ? $json.records.length : 0 }}",
+              "rightValue": 0,
+              "operator": { "type": "number", "operation": "equals" }
+            }
+          ]
+        }
+      },
+      "id": "is-new-checkout",
+      "name": "Is New Checkout? (isEmpty)",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": { "__rl": true, "value": "YOUR_AIRTABLE_BASE_ID", "mode": "id" },
+        "table": { "__rl": true, "value": "abandonedCheckouts", "mode": "name" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "checkout_id": "={{ $json.checkoutId }}",
+            "checkout_name": "={{ $json.checkoutName }}",
+            "customer_email": "={{ $json.customerEmail }}",
+            "customer_first_name": "={{ $json.customerFirstName }}",
+            "customer_last_name": "={{ $json.customerLastName }}",
+            "total_price": "={{ $json.totalPrice }}",
+            "currency": "={{ $json.currency }}",
+            "abandoned_url": "={{ $json.recoveryUrl }}",
+            "line_items": "={{ $json.lineItemsSummary }}",
+            "discount_codes": "={{ $json.discountCodes.join(', ') }}",
+            "status": "PROCESSING",
+            "attempt_count": 0,
+            "last_suggestion": "",
+            "created_at": "={{ $json.createdAt }}",
+            "logged_at": "={{ $now.toISO() }}"
+          }
+        }
+      },
+      "id": "log-to-airtable",
+      "name": "Log New Checkout to Airtable",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [1340, 300],
+      "credentials": {
+        "airtableTokenApi": { "id": "YOUR_AIRTABLE_CREDENTIAL_ID", "name": "Airtable" }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://{{ $vars.SHOPIFY_STORE_DOMAIN }}/admin/api/2024-01/customers/search.json",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "query", "value": "={{ `email:${$('Extract & Format Checkouts').first().json.customerEmail}` }}" },
+            { "name": "fields", "value": "id,email,first_name,last_name,orders_count,total_spent,tags" }
+          ]
+        }
+      },
+      "id": "enrich-customer",
+      "name": "Enrich Customer Data (Shopify)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1560, 300],
+      "credentials": {
+        "httpHeaderAuth": { "id": "YOUR_SHOPIFY_CREDENTIAL_ID", "name": "Shopify Header Auth" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const checkoutData = $('Extract & Format Checkouts').first().json;\nconst airtableRecord = $('Log New Checkout to Airtable').first().json;\nconst enrichment = $input.first().json;\n\nconst customer = enrichment.customers && enrichment.customers.length > 0\n  ? enrichment.customers[0]\n  : null;\n\nreturn [{\n  json: {\n    ...checkoutData,\n    airtableRecordId: airtableRecord.id,\n    customerOrdersCount: customer?.orders_count || 0,\n    customerTotalSpent: customer?.total_spent || '0.00',\n    customerTags: customer?.tags || '',\n    attemptCount: 0,\n    lastSuggestion: '',\n    enriched: customer !== null\n  }\n}];"
+      },
+      "id": "merge-data",
+      "name": "Merge Checkout + Customer Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "operation": "create",
+        "model": { "__rl": true, "value": "gpt-4o", "mode": "list" },
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are a friendly and knowledgeable beauty advisor for an eBeauty brand. Your job is to write warm, helpful, and personal abandoned cart recovery messages. Write in a single flowing paragraph without line breaks. The tone should be warm, expert, and non-pushy. Use the customer's name if available, mention specific cart items, include the total price, any discount code, and always include the recovery link. Do not use emojis excessively. Write as if you genuinely care about helping them find the right products."
+            },
+            {
+              "role": "user",
+              "content": "=Write an abandoned cart recovery message for this customer:\n\nName: {{ $json.customerFirstName || 'there' }}\nCart items: {{ $json.lineItemsSummary }}\nTotal: {{ $json.currency }} {{ $json.totalPrice }}\nDiscount code: {{ $json.discountCodes.length > 0 ? $json.discountCodes.join(', ') : 'None' }}\nRecovery link: {{ $json.recoveryUrl }}\nPrevious orders: {{ $json.customerOrdersCount }}\n{{ $json.lastSuggestion ? `\\nImprovement suggestion from previous attempt: ${$json.lastSuggestion}` : '' }}"
+            }
+          ]
+        },
+        "options": { "temperature": 0.7 }
+      },
+      "id": "generate-message",
+      "name": "GPT-4o: Write Recovery Message",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.4,
+      "position": [2000, 300],
+      "credentials": {
+        "openAiApi": { "id": "YOUR_OPENAI_CREDENTIAL_ID", "name": "OpenAI" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const prev = $('Merge Checkout + Customer Data').first().json;\nconst message = $input.first().json.message.content;\n\nreturn [{\n  json: {\n    ...prev,\n    generatedMessage: message,\n    attemptCount: (prev.attemptCount || 0) + 1\n  }\n}];"
+      },
+      "id": "capture-message",
+      "name": "Capture Generated Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2220, 300]
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "operation": "create",
+        "model": { "__rl": true, "value": "gpt-4o-mini", "mode": "list" },
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are a conversion copywriting expert. Evaluate the persuasiveness of abandoned cart recovery emails on a scale of 1 to 10. Consider: emotional appeal, clarity, urgency, personalization, and CTA strength. Respond ONLY in this exact JSON format with no extra text:\n{\n  \"score\": 8,\n  \"suggestion\": \"Specific actionable improvement suggestion here\"\n}"
+            },
+            {
+              "role": "user",
+              "content": "=Evaluate this abandoned cart recovery message:\n\n{{ $json.generatedMessage }}"
+            }
+          ]
+        },
+        "options": { "temperature": 0.3 }
+      },
+      "id": "evaluate-message",
+      "name": "GPT: Evaluate Persuasiveness (1-10)",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.4,
+      "position": [2440, 300],
+      "credentials": {
+        "openAiApi": { "id": "YOUR_OPENAI_CREDENTIAL_ID", "name": "OpenAI" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const prev = $('Capture Generated Message').first().json;\nconst evalRaw = $input.first().json.message.content;\n\nlet parsed;\ntry {\n  parsed = JSON.parse(evalRaw);\n} catch(e) {\n  parsed = { score: 7, suggestion: '' };\n}\n\nconst passesThreshold = parsed.score >= 7;\nconst hitMaxAttempts = prev.attemptCount >= 3;\n\nreturn [{\n  json: {\n    ...prev,\n    persuasionScore: parsed.score,\n    suggestion: parsed.suggestion,\n    passesThreshold,\n    hitMaxAttempts,\n    shouldSend: passesThreshold || hitMaxAttempts\n  }\n}];"
+      },
+      "id": "parse-eval",
+      "name": "Parse Evaluation & Check Threshold",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2660, 300]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": { "__rl": true, "value": "YOUR_AIRTABLE_BASE_ID", "mode": "id" },
+        "table": { "__rl": true, "value": "abandonedCheckouts", "mode": "name" },
+        "id": "={{ $json.airtableRecordId }}",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "last_suggestion": "={{ $json.suggestion }}",
+            "attempt_count": "={{ $json.attemptCount }}",
+            "last_score": "={{ $json.persuasionScore }}"
+          }
+        }
+      },
+      "id": "update-airtable-loop",
+      "name": "Update Airtable — Suggestion & Attempt Count",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [2880, 300],
+      "credentials": {
+        "airtableTokenApi": { "id": "YOUR_AIRTABLE_CREDENTIAL_ID", "name": "Airtable" }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.shouldSend }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ]
+        }
+      },
+      "id": "should-send",
+      "name": "Score ≥7 or Max 3 Attempts?",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [3100, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.shouldSend }}",
+              "rightValue": false,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ]
+        }
+      },
+      "id": "should-retry",
+      "name": "Score <7 — Retry?",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [3100, 520]
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "operation": "create",
+        "model": { "__rl": true, "value": "gpt-4o", "mode": "list" },
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are a friendly and knowledgeable beauty advisor for an eBeauty brand. Your job is to write warm, helpful, and personal abandoned cart recovery messages. Write in a single flowing paragraph without line breaks. The tone should be warm, expert, and non-pushy. Use the customer's name if available, mention specific cart items, include the total price, any discount code, and always include the recovery link."
+            },
+            {
+              "role": "user",
+              "content": "=Rewrite this abandoned cart recovery message incorporating the following improvement:\n\nPrevious message:\n{{ $json.generatedMessage }}\n\nImprovement suggestion:\n{{ $json.suggestion }}\n\nCustomer name: {{ $json.customerFirstName || 'there' }}\nCart items: {{ $json.lineItemsSummary }}\nTotal: {{ $json.currency }} {{ $json.totalPrice }}\nDiscount code: {{ $json.discountCodes.length > 0 ? $json.discountCodes.join(', ') : 'None' }}\nRecovery link: {{ $json.recoveryUrl }}"
+            }
+          ]
+        },
+        "options": { "temperature": 0.7 }
+      },
+      "id": "retry-message",
+      "name": "GPT-4o: Rewrite with Feedback",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.4,
+      "position": [3320, 520],
+      "credentials": {
+        "openAiApi": { "id": "YOUR_OPENAI_CREDENTIAL_ID", "name": "OpenAI" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const prev = $('Parse Evaluation & Check Threshold').first().json;\nconst newMessage = $input.first().json.message.content;\n\nreturn [{\n  json: {\n    ...prev,\n    generatedMessage: newMessage,\n    attemptCount: prev.attemptCount + 1,\n    lastSuggestion: prev.suggestion\n  }\n}];"
+      },
+      "id": "update-for-retry",
+      "name": "Update State for Re-Evaluation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3540, 520]
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "operation": "create",
+        "model": { "__rl": true, "value": "gpt-4o-mini", "mode": "list" },
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are a conversion copywriting expert. Evaluate the persuasiveness of abandoned cart recovery emails on a scale of 1 to 10. Respond ONLY in this exact JSON format:\n{\n  \"score\": 8,\n  \"suggestion\": \"Specific actionable improvement suggestion here\"\n}"
+            },
+            {
+              "role": "user",
+              "content": "=Evaluate this rewritten abandoned cart recovery message:\n\n{{ $json.generatedMessage }}"
+            }
+          ]
+        },
+        "options": { "temperature": 0.3 }
+      },
+      "id": "re-evaluate",
+      "name": "GPT: Re-Evaluate Rewritten Message",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.4,
+      "position": [3760, 520],
+      "credentials": {
+        "openAiApi": { "id": "YOUR_OPENAI_CREDENTIAL_ID", "name": "OpenAI" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const prev = $('Update State for Re-Evaluation').first().json;\nconst evalRaw = $input.first().json.message.content;\n\nlet parsed;\ntry {\n  parsed = JSON.parse(evalRaw);\n} catch(e) {\n  parsed = { score: 7, suggestion: '' };\n}\n\nconst passesThreshold = parsed.score >= 7;\nconst hitMaxAttempts = prev.attemptCount >= 3;\n\nreturn [{\n  json: {\n    ...prev,\n    persuasionScore: parsed.score,\n    suggestion: parsed.suggestion,\n    passesThreshold,\n    hitMaxAttempts,\n    shouldSend: passesThreshold || hitMaxAttempts\n  }\n}];"
+      },
+      "id": "parse-re-eval",
+      "name": "Parse Re-Evaluation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3980, 520]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": { "__rl": true, "value": "YOUR_AIRTABLE_BASE_ID", "mode": "id" },
+        "table": { "__rl": true, "value": "abandonedCheckouts", "mode": "name" },
+        "id": "={{ $json.airtableRecordId }}",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "last_suggestion": "={{ $json.suggestion }}",
+            "attempt_count": "={{ $json.attemptCount }}",
+            "last_score": "={{ $json.persuasionScore }}"
+          }
+        }
+      },
+      "id": "update-airtable-retry",
+      "name": "Update Airtable — Retry Attempt",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [4200, 520],
+      "credentials": {
+        "airtableTokenApi": { "id": "YOUR_AIRTABLE_CREDENTIAL_ID", "name": "Airtable" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge final message from either path (first attempt pass OR retry path)\nlet data;\ntry {\n  data = $('Parse Evaluation & Check Threshold').first().json;\n} catch(e) {\n  data = $('Parse Re-Evaluation').first().json;\n}\n\nreturn [{ json: data }];"
+      },
+      "id": "merge-final",
+      "name": "Merge Final Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3320, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://a.klaviyo.com/api/events/",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Klaviyo-API-Key {{ $vars.KLAVIYO_PRIVATE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "revision", "value": "2024-02-15" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={\n  \"data\": {\n    \"type\": \"event\",\n    \"attributes\": {\n      \"metric\": {\n        \"data\": {\n          \"type\": \"metric\",\n          \"attributes\": {\n            \"name\": \"AI Recovery Email Sent\"\n          }\n        }\n      },\n      \"profile\": {\n        \"data\": {\n          \"type\": \"profile\",\n          \"attributes\": {\n            \"email\": \"{{ $json.customerEmail }}\"\n          }\n        }\n      },\n      \"properties\": {\n        \"email_message\": \"{{ $json.generatedMessage }}\",\n        \"persuasion_score\": {{ $json.persuasionScore }},\n        \"checkout_id\": \"{{ $json.checkoutId }}\",\n        \"total_price\": \"{{ $json.totalPrice }}\",\n        \"currency\": \"{{ $json.currency }}\",\n        \"line_items\": \"{{ $json.lineItemsSummary }}\",\n        \"recovery_url\": \"{{ $json.recoveryUrl }}\",\n        \"attempt_count\": {{ $json.attemptCount }}\n      },\n      \"time\": \"{{ $now.toISO() }}\"\n    }\n  }\n}"
+      },
+      "id": "trigger-klaviyo",
+      "name": "Send to Klaviyo — AI Recovery Email Sent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [3540, 300]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": { "__rl": true, "value": "YOUR_AIRTABLE_BASE_ID", "mode": "id" },
+        "table": { "__rl": true, "value": "abandonedCheckouts", "mode": "name" },
+        "id": "={{ $json.airtableRecordId }}",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "SENT_TO_KLAVIYO",
+            "final_message": "={{ $json.generatedMessage }}",
+            "final_score": "={{ $json.persuasionScore }}",
+            "final_attempt_count": "={{ $json.attemptCount }}",
+            "sent_at": "={{ $now.toISO() }}"
+          }
+        }
+      },
+      "id": "update-airtable-final",
+      "name": "Update Airtable — Final Status",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [3760, 300],
+      "credentials": {
+        "airtableTokenApi": { "id": "YOUR_AIRTABLE_CREDENTIAL_ID", "name": "Airtable" }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"success\": true }"
+      },
+      "id": "respond-webhook",
+      "name": "Respond to Shopify Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [3980, 300]
+    },
+    {
+      "parameters": {
+        "content": "## Shopify Abandoned Checkout Recovery\n\n**Airtable Table: abandonedCheckouts**\nColumns needed:\n- checkout_id, checkout_name, customer_email\n- customer_first_name, customer_last_name\n- total_price, currency, abandoned_url\n- line_items, discount_codes\n- status, attempt_count, last_suggestion, last_score\n- final_message, final_score, sent_at, logged_at\n\n**n8n Variables to set:**\n- SHOPIFY_STORE_DOMAIN\n- SHOPIFY_ACCESS_TOKEN\n- KLAVIYO_PRIVATE_KEY\n\n**Feedback loop logic:**\n- Score ≥ 7 → Send to Klaviyo\n- Score < 7 AND attempts < 3 → Rewrite with suggestion\n- Attempts = 3 → Send regardless",
+        "height": 300,
+        "width": 500
+      },
+      "id": "sticky-setup",
+      "name": "Setup Notes",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [240, 60]
+    }
+  ],
+  "connections": {
+    "Shopify Checkout Update Webhook": { "main": [[{ "node": "Fetch Abandoned Checkouts (GraphQL)", "type": "main", "index": 0 }]] },
+    "Fetch Abandoned Checkouts (GraphQL)": { "main": [[{ "node": "Extract & Format Checkouts", "type": "main", "index": 0 }]] },
+    "Extract & Format Checkouts": { "main": [[{ "node": "Check Airtable — Already Messaged?", "type": "main", "index": 0 }]] },
+    "Check Airtable — Already Messaged?": { "main": [[{ "node": "Is New Checkout? (isEmpty)", "type": "main", "index": 0 }]] },
+    "Is New Checkout? (isEmpty)": { "main": [[{ "node": "Log New Checkout to Airtable", "type": "main", "index": 0 }]] },
+    "Log New Checkout to Airtable": { "main": [[{ "node": "Enrich Customer Data (Shopify)", "type": "main", "index": 0 }]] },
+    "Enrich Customer Data (Shopify)": { "main": [[{ "node": "Merge Checkout + Customer Data", "type": "main", "index": 0 }]] },
+    "Merge Checkout + Customer Data": { "main": [[{ "node": "GPT-4o: Write Recovery Message", "type": "main", "index": 0 }]] },
+    "GPT-4o: Write Recovery Message": { "main": [[{ "node": "Capture Generated Message", "type": "main", "index": 0 }]] },
+    "Capture Generated Message": { "main": [[{ "node": "GPT: Evaluate Persuasiveness (1-10)", "type": "main", "index": 0 }]] },
+    "GPT: Evaluate Persuasiveness (1-10)": { "main": [[{ "node": "Parse Evaluation & Check Threshold", "type": "main", "index": 0 }]] },
+    "Parse Evaluation & Check Threshold": { "main": [[{ "node": "Update Airtable — Suggestion & Attempt Count", "type": "main", "index": 0 }]] },
+    "Update Airtable — Suggestion & Attempt Count": {
+      "main": [
+        [{ "node": "Score ≥7 or Max 3 Attempts?", "type": "main", "index": 0 }],
+        [{ "node": "Score <7 — Retry?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Score ≥7 or Max 3 Attempts?": { "main": [[{ "node": "Merge Final Message", "type": "main", "index": 0 }]] },
+    "Score <7 — Retry?": { "main": [[{ "node": "GPT-4o: Rewrite with Feedback", "type": "main", "index": 0 }]] },
+    "GPT-4o: Rewrite with Feedback": { "main": [[{ "node": "Update State for Re-Evaluation", "type": "main", "index": 0 }]] },
+    "Update State for Re-Evaluation": { "main": [[{ "node": "GPT: Re-Evaluate Rewritten Message", "type": "main", "index": 0 }]] },
+    "GPT: Re-Evaluate Rewritten Message": { "main": [[{ "node": "Parse Re-Evaluation", "type": "main", "index": 0 }]] },
+    "Parse Re-Evaluation": { "main": [[{ "node": "Update Airtable — Retry Attempt", "type": "main", "index": 0 }]] },
+    "Update Airtable — Retry Attempt": { "main": [[{ "node": "Merge Final Message", "type": "main", "index": 0 }]] },
+    "Merge Final Message": { "main": [[{ "node": "Send to Klaviyo — AI Recovery Email Sent", "type": "main", "index": 0 }]] },
+    "Send to Klaviyo — AI Recovery Email Sent": { "main": [[{ "node": "Update Airtable — Final Status", "type": "main", "index": 0 }]] },
+    "Update Airtable — Final Status": { "main": [[{ "node": "Respond to Shopify Webhook", "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "YOUR_ERROR_WORKFLOW_ID"
+  }
+}
