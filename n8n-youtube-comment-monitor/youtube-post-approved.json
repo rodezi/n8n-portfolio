@@ -1,0 +1,125 @@
+{
+  "name": "YouTube Post Approved Reply (Sheets)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "youtube-post-reply",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook: Approved Reply",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nif (!body.commentId || !body.reply) {\n  throw new Error('Missing commentId or reply in request body');\n}\n\n// Pre-serialize the YouTube API request body so special characters\n// in the reply text (quotes, newlines, etc.) are properly escaped.\nconst serializedBody = JSON.stringify({\n  snippet: {\n    parentId: body.commentId,\n    textOriginal: body.reply\n  }\n});\n\nreturn [{ json: { commentId: body.commentId, reply: body.reply, serializedBody } }];"
+      },
+      "id": "validate-input",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.googleapis.com/youtube/v3/comments",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "part", "value": "snippet" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.serializedBody }}"
+      },
+      "id": "post-reply",
+      "name": "Post Reply to YouTube",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [680, 300],
+      "credentials": {
+        "oAuth2Api": { "id": "YOUR_YOUTUBE_OAUTH_CREDENTIAL_ID", "name": "YouTube OAuth" }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": { "__rl": true, "value": "YOUR_GOOGLE_SHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "CommentLog", "mode": "name" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "POSTED",
+            "postedAt": "={{ $now.toISO() }}",
+            "finalReply": "={{ $('Validate Input').first().json.reply }}"
+          }
+        },
+        "where": {
+          "values": [
+            {
+              "column": "commentId",
+              "value": "={{ $('Validate Input').first().json.commentId }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "update-log",
+      "name": "Update Status in Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [900, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "YOUR_GSHEETS_CREDENTIAL_ID", "name": "Google Sheets" }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "channel": { "__rl": true, "value": "YOUR_SLACK_CHANNEL_ID", "mode": "id" },
+        "text": "=✅ Reply posted to YouTube!\n*Comment ID:* `{{ $('Validate Input').first().json.commentId }}`\n*Reply:* {{ $('Validate Input').first().json.reply }}",
+        "otherOptions": {}
+      },
+      "id": "slack-confirm",
+      "name": "Slack: Confirm Posted",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.1,
+      "position": [1120, 300],
+      "credentials": {
+        "slackApi": { "id": "YOUR_SLACK_CREDENTIAL_ID", "name": "Slack" }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, commentId: $('Validate Input').first().json.commentId }) }}"
+      },
+      "id": "respond-ok",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1340, 300]
+    }
+  ],
+  "connections": {
+    "Webhook: Approved Reply": { "main": [[{ "node": "Validate Input", "type": "main", "index": 0 }]] },
+    "Validate Input": { "main": [[{ "node": "Post Reply to YouTube", "type": "main", "index": 0 }]] },
+    "Post Reply to YouTube": { "main": [[{ "node": "Update Status in Sheet", "type": "main", "index": 0 }]] },
+    "Update Status in Sheet": { "main": [[{ "node": "Slack: Confirm Posted", "type": "main", "index": 0 }]] },
+    "Slack: Confirm Posted": { "main": [[{ "node": "Respond OK", "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "YOUR_ERROR_WORKFLOW_ID"
+  }
+}

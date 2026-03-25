@@ -1,0 +1,243 @@
+{
+  "name": "YouTube Comment Monitor & AI Classifier (Sheets Dedup)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "minutes", "minutesInterval": 15 }]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Every 15 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": { "__rl": true, "value": "YOUR_GOOGLE_SHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "SeenComments", "mode": "name" },
+        "options": {}
+      },
+      "id": "read-seen-sheet",
+      "name": "Read Seen Comments Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [460, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "YOUR_GSHEETS_CREDENTIAL_ID", "name": "Google Sheets" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate all sheet rows into a single item with an array of seen IDs.\n// This runs ONCE per workflow execution, not once per comment.\nconst rows = $input.all();\nconst seenIds = rows.map(r => r.json.commentId).filter(Boolean);\nreturn [{ json: { seenIds } }];"
+      },
+      "id": "build-seen-ids",
+      "name": "Build Seen IDs Set",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const videoIds = [\n  'VIDEO_ID_1',\n  'VIDEO_ID_2',\n  'VIDEO_ID_3'\n];\nreturn videoIds.map(id => ({ json: { videoId: id } }));"
+      },
+      "id": "video-list",
+      "name": "Video ID List",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://www.googleapis.com/youtube/v3/commentThreads",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "part", "value": "snippet" },
+            { "name": "videoId", "value": "={{ $json.videoId }}" },
+            { "name": "maxResults", "value": "50" },
+            { "name": "order", "value": "time" },
+            { "name": "key", "value": "YOUR_YOUTUBE_API_KEY" }
+          ]
+        }
+      },
+      "id": "fetch-comments",
+      "name": "Fetch YouTube Comments",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Read the seen IDs built once at the start of the run.\n// Use .first() here is correct because Build Seen IDs Set always outputs exactly 1 item.\nconst seenIds = new Set($('Build Seen IDs Set').first().json.seenIds || []);\nconst results = [];\n\nfor (const item of $input.all()) {\n  const comments = item.json.items || [];\n  for (const comment of comments) {\n    const snippet = comment.snippet.topLevelComment.snippet;\n    const commentId = comment.snippet.topLevelComment.id;\n    if (!seenIds.has(commentId)) {\n      results.push({\n        json: {\n          commentId,\n          videoId: comment.snippet.videoId,\n          authorName: snippet.authorDisplayName,\n          text: snippet.textDisplay,\n          publishedAt: snippet.publishedAt,\n          likeCount: snippet.likeCount\n        }\n      });\n    }\n  }\n}\n\n// Returning [] stops execution cleanly when there are no new comments.\nreturn results;"
+      },
+      "id": "extract-filter-new",
+      "name": "Extract & Filter New Comments",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": { "__rl": true, "value": "YOUR_GOOGLE_SHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "SeenComments", "mode": "name" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "commentId": "={{ $json.commentId }}",
+            "videoId": "={{ $json.videoId }}",
+            "authorName": "={{ $json.authorName }}",
+            "seenAt": "={{ $now.toISO() }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "mark-seen",
+      "name": "Mark as Seen in Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [1560, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "YOUR_GSHEETS_CREDENTIAL_ID", "name": "Google Sheets" }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "operation": "create",
+        "model": { "__rl": true, "value": "gpt-4o-mini", "mode": "list" },
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are a YouTube comment analyst. Classify the comment into ONE of these categories:\n- QUESTION\n- POSITIVE_FEEDBACK\n- NEGATIVE_FEEDBACK\n- SPAM\n- COLLABORATION\n- HATE_SPEECH\n- OTHER\n\nThen write a friendly, professional reply draft.\n\nRespond ONLY in this exact JSON format with no extra text:\n{\n  \"category\": \"CATEGORY_HERE\",\n  \"confidence\": 0.95,\n  \"reason\": \"Brief reason\",\n  \"draft_reply\": \"Your suggested reply\"\n}"
+            },
+            {
+              "role": "user",
+              "content": "=Comment from {{ $json.authorName }}:\n\n{{ $json.text }}"
+            }
+          ]
+        },
+        "options": { "temperature": 0.3 }
+      },
+      "id": "classify-comment",
+      "name": "Classify & Draft Reply (GPT)",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.4,
+      "position": [1780, 300],
+      "credentials": {
+        "openAiApi": { "id": "YOUR_OPENAI_CREDENTIAL_ID", "name": "OpenAI" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst aiRaw = item.json.message.content;\n\nlet parsed;\ntry {\n  parsed = JSON.parse(aiRaw);\n} catch(e) {\n  parsed = {\n    category: 'OTHER',\n    confidence: 0,\n    reason: 'Parse error',\n    draft_reply: 'Thank you for your comment!'\n  };\n}\n\nconst skipCategories = ['SPAM', 'HATE_SPEECH'];\n\nreturn [{\n  json: {\n    ...item.json,\n    category: parsed.category,\n    confidence: parsed.confidence,\n    reason: parsed.reason,\n    draft_reply: parsed.draft_reply,\n    skip: skipCategories.includes(parsed.category)\n  }\n}];"
+      },
+      "id": "parse-ai",
+      "name": "Parse AI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 300]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": { "__rl": true, "value": "YOUR_GOOGLE_SHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "CommentLog", "mode": "name" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "commentId": "={{ $json.commentId }}",
+            "videoId": "={{ $json.videoId }}",
+            "authorName": "={{ $json.authorName }}",
+            "text": "={{ $json.text }}",
+            "publishedAt": "={{ $json.publishedAt }}",
+            "category": "={{ $json.category }}",
+            "confidence": "={{ $json.confidence }}",
+            "reason": "={{ $json.reason }}",
+            "draft_reply": "={{ $json.draft_reply }}",
+            "status": "PENDING",
+            "processedAt": "={{ $now.toISO() }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "log-to-sheet",
+      "name": "Log to CommentLog Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [2220, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "YOUR_GSHEETS_CREDENTIAL_ID", "name": "Google Sheets" }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": false,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ]
+        }
+      },
+      "id": "skip-spam",
+      "name": "Skip Spam/Hate",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [2440, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "channel": { "__rl": true, "value": "YOUR_SLACK_CHANNEL_ID", "mode": "id" },
+        "text": "=*🎬 New YouTube Comment — Review Required*\n\n*Video ID:* `{{ $json.videoId }}`\n*Author:* {{ $json.authorName }}\n*Category:* `{{ $json.category }}` ({{ Math.round($json.confidence * 100) }}% confidence)\n*Reason:* {{ $json.reason }}\n\n*Comment:*\n>>> {{ $json.text }}\n\n*💬 Suggested Reply:*\n>>> {{ $json.draft_reply }}\n\n*Comment ID:* `{{ $json.commentId }}`\n\n✅ To post this reply, send a POST to your reply webhook:\n`{ \"commentId\": \"{{ $json.commentId }}\", \"reply\": \"EDIT_OR_APPROVE_HERE\" }`",
+        "otherOptions": {}
+      },
+      "id": "slack-notify",
+      "name": "Notify Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.1,
+      "position": [2660, 300],
+      "credentials": {
+        "slackApi": { "id": "YOUR_SLACK_CREDENTIAL_ID", "name": "Slack" }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Setup — Google Sheets Structure\n\nCreate ONE Google Sheet with TWO tabs:\n\n**Tab 1: SeenComments**\nColumns: commentId | videoId | authorName | seenAt\n\n**Tab 2: CommentLog**\nColumns: commentId | videoId | authorName | text | publishedAt | category | confidence | reason | draft_reply | status | processedAt\n\nReplace YOUR_GOOGLE_SHEET_ID with the Sheet ID from the URL.\n\nNote: SeenComments is read ONCE per run (not once per comment).\nThe seen IDs are aggregated into a single item and referenced globally\nby the Extract & Filter node via $('Build Seen IDs Set').first().",
+        "height": 260,
+        "width": 480
+      },
+      "id": "sticky-note",
+      "name": "Sheet Setup",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [240, 60]
+    }
+  ],
+  "connections": {
+    "Every 15 Minutes": { "main": [[{ "node": "Read Seen Comments Sheet", "type": "main", "index": 0 }]] },
+    "Read Seen Comments Sheet": { "main": [[{ "node": "Build Seen IDs Set", "type": "main", "index": 0 }]] },
+    "Build Seen IDs Set": { "main": [[{ "node": "Video ID List", "type": "main", "index": 0 }]] },
+    "Video ID List": { "main": [[{ "node": "Fetch YouTube Comments", "type": "main", "index": 0 }]] },
+    "Fetch YouTube Comments": { "main": [[{ "node": "Extract & Filter New Comments", "type": "main", "index": 0 }]] },
+    "Extract & Filter New Comments": { "main": [[{ "node": "Mark as Seen in Sheet", "type": "main", "index": 0 }]] },
+    "Mark as Seen in Sheet": { "main": [[{ "node": "Classify & Draft Reply (GPT)", "type": "main", "index": 0 }]] },
+    "Classify & Draft Reply (GPT)": { "main": [[{ "node": "Parse AI Response", "type": "main", "index": 0 }]] },
+    "Parse AI Response": { "main": [[{ "node": "Log to CommentLog Sheet", "type": "main", "index": 0 }]] },
+    "Log to CommentLog Sheet": { "main": [[{ "node": "Skip Spam/Hate", "type": "main", "index": 0 }]] },
+    "Skip Spam/Hate": { "main": [[{ "node": "Notify Slack", "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "YOUR_ERROR_WORKFLOW_ID"
+  }
+}
