@@ -1,6 +1,6 @@
 # n8n Automation Projects
 
-A collection of production n8n workflows built to automate real estate lead management, field service operations, email outreach tracking, and lead response. Each project targets a specific business process and integrates multiple external services through a centralized architecture.
+A collection of production n8n workflows built to automate real estate lead management, field service operations, email outreach tracking, lead response, content engagement, and inbox triage. Each project targets a specific business process and integrates multiple external services through a centralized architecture.
 
 ---
 
@@ -46,11 +46,30 @@ A lightweight nightly workflow that keeps the **Google Sheets** master dataset i
 
 ### 5. [Google Guaranteed Lead → SMS Automation](n8n-google-guaranted-leads/n8n-google-guaranted-leads.md)
 
+
 Monitors Gmail every minute for new **Google Local Services Ads (Google Guaranteed)** lead notifications. When a lead arrives, the workflow parses the HTML email to extract the contact's name, phone, and service type — normalizing the phone to E.164 format. It then deduplicates against a **Google Sheets** log, checks **business hours (US Eastern)**, and fires an immediate personalized **SMS via Twilio**. The lead is logged to the sheet and a confirmation email is sent to the client. If parsing fails, an alert is sent to the operator.
 
 **Key integrations:** Gmail, Twilio, Google Sheets
 **Trigger:** Gmail poll (every minute)
 **Output:** SMS sent to lead + row logged in Google Sheets + client notified by email
+
+---
+
+### 6. [YouTube Comment Monitor & Auto-Reply System](n8n-youtube-comment-monitor/youtube-system.md)
+
+A two-workflow system that monitors YouTube comments across multiple videos on a recurring schedule. New comments are deduplicated using **Google Sheets**, classified by **GPT-4o-mini** into categories (question, feedback, spam, collaboration, hate speech, etc.), and routed to a **Slack** channel with the classification, confidence score, and a suggested reply draft for team review. Once the team approves or edits a reply, a single POST to the second workflow's webhook posts it back to YouTube via OAuth2 and updates the sheet log. SPAM and HATE_SPEECH comments are logged but never surface in Slack.
+
+**Key integrations:** YouTube Data API v3, OpenAI GPT-4o-mini, Google Sheets, Slack
+**Trigger:** Schedule (every 15 min) + Webhook (reply approval)
+**Output:** Slack notification with AI-drafted reply + approved reply posted to YouTube
+
+### 7. [Email Triage & AI Classifier](n8n-email-classifier/email-classifier.md)
+
+Polls a Gmail inbox every 5 minutes and runs each new unread email through **GPT-4o-mini** for classification, priority scoring, summarization, and reply drafting. Emails are deduplicated via **Google Sheets**, labeled in Gmail by category (Support, Sales, HR, Finance, Legal, Internal, Newsletter, Spam, Other), and logged to a full audit sheet. **CRITICAL** emails trigger an immediate Slack alert to the manager and save an AI-drafted reply to Gmail Drafts — threaded and ready to send. **HIGH** priority emails notify the team channel. MEDIUM and LOW emails are silently labeled and logged, keeping the inbox clean without noise.
+
+**Key integrations:** Gmail, OpenAI GPT-4o-mini, Google Sheets, Slack
+**Trigger:** Schedule (every 5 min)
+**Output:** Gmail labeled + EmailLog updated + Slack alert + Draft reply saved (CRITICAL only)
 
 ---
 
@@ -73,9 +92,10 @@ The **Internal System** (staging API) is used by both the Email Automation and O
 | Layer | Tools |
 |---|---|
 | Automation platform | n8n |
-| AI / LLM | OpenAI GPT-4.1-mini, GPT-4o, GPT-5-mini |
-| Communication | WhatsApp Business API, Gmail, Twilio SMS |
+| AI / LLM | OpenAI GPT-4.1-mini, GPT-4o, GPT-4o-mini, GPT-5-mini |
+| Communication | WhatsApp Business API, Gmail, Twilio SMS, Slack |
 | CRM / Outreach | EasyBroker, Instantly |
 | Field Service | Zoho FSM |
 | Data storage | Google Sheets |
 | Internal backend | Internal System API (staging) |
+
