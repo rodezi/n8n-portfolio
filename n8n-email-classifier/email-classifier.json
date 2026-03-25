@@ -1,0 +1,354 @@
+{
+  "name": "Email Triage & AI Classifier",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "minutes", "minutesInterval": 5 }]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": { "__rl": true, "value": "YOUR_GOOGLE_SHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "ProcessedEmails", "mode": "name" },
+        "options": {}
+      },
+      "id": "read-processed-sheet",
+      "name": "Read Processed Emails Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [460, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "YOUR_GSHEETS_CREDENTIAL_ID", "name": "Google Sheets" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate all processed message IDs into one item.\n// Runs ONCE per execution — same pattern used to avoid N sheet reads.\nconst rows = $input.all();\nconst processedIds = rows.map(r => r.json.messageId).filter(Boolean);\nreturn [{ json: { processedIds } }];"
+      },
+      "id": "build-processed-ids",
+      "name": "Build Processed IDs Set",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "getAll",
+        "returnAll": false,
+        "limit": 50,
+        "filters": {
+          "q": "is:unread in:inbox"
+        },
+        "options": {
+          "format": "full"
+        }
+      },
+      "id": "fetch-emails",
+      "name": "Fetch Unread Emails",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [900, 300],
+      "credentials": {
+        "gmailOAuth2": { "id": "YOUR_GMAIL_CREDENTIAL_ID", "name": "Gmail" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Dedup against processed IDs (built once at start of run).\n// Also extracts and cleans email fields from the Gmail API payload.\nconst processedIds = new Set($('Build Processed IDs Set').first().json.processedIds || []);\nconst results = [];\n\nconst findBody = (parts, payload) => {\n  for (const part of (parts || [])) {\n    if (part.mimeType === 'text/plain' && part.body?.data) {\n      return Buffer.from(part.body.data, 'base64').toString('utf8');\n    }\n    if (part.parts) {\n      const nested = findBody(part.parts, null);\n      if (nested) return nested;\n    }\n  }\n  if (payload?.body?.data) {\n    return Buffer.from(payload.body.data, 'base64').toString('utf8');\n  }\n  return '';\n};\n\nfor (const item of $input.all()) {\n  const msg = item.json;\n  if (processedIds.has(msg.id)) continue;\n\n  const headers = msg.payload?.headers || [];\n  const h = name => headers.find(x => x.name.toLowerCase() === name.toLowerCase())?.value || '';\n\n  let body = findBody(msg.payload?.parts, msg.payload);\n  // Strip HTML tags and collapse whitespace\n  body = body.replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim();\n  // Truncate to 3000 chars to stay within token limits\n  body = body.substring(0, 3000) + (body.length > 3000 ? ' [truncated]' : '');\n\n  results.push({\n    json: {\n      messageId: msg.id,\n      threadId: msg.threadId,\n      subject: h('Subject') || '(no subject)',\n      from: h('From'),\n      to: h('To'),\n      date: h('Date'),\n      body\n    }\n  });\n}\n\n// Returning [] stops execution cleanly when there are no new emails.\nreturn results;"
+      },
+      "id": "extract-filter-new",
+      "name": "Extract & Filter New Emails",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": { "__rl": true, "value": "YOUR_GOOGLE_SHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "ProcessedEmails", "mode": "name" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "messageId": "={{ $json.messageId }}",
+            "subject": "={{ $json.subject }}",
+            "from": "={{ $json.from }}",
+            "processedAt": "={{ $now.toISO() }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "mark-processed",
+      "name": "Mark as Processed (Sheet)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [1340, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "YOUR_GSHEETS_CREDENTIAL_ID", "name": "Google Sheets" }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "operation": "create",
+        "model": { "__rl": true, "value": "gpt-4o-mini", "mode": "list" },
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are an intelligent email triage assistant. Analyze the email and respond ONLY in this exact JSON format with no extra text:\n{\n  \"category\": \"SUPPORT|SALES|HR|FINANCE|LEGAL|INTERNAL|NEWSLETTER|SPAM|OTHER\",\n  \"priority\": \"CRITICAL|HIGH|MEDIUM|LOW\",\n  \"summary\": \"One to two sentence summary of what this email is about and what action is needed.\",\n  \"requires_response\": true,\n  \"response_deadline\": \"immediate|24h|48h|this_week|none\",\n  \"suggested_assignee\": \"manager|support|sales|hr|finance|legal|none\",\n  \"draft_reply\": \"A concise, professional reply draft. Empty string if requires_response is false.\"\n}\n\nPriority guidelines:\n- CRITICAL: legal risk, security incident, executive escalation, high-value client emergency\n- HIGH: client request, sales opportunity, time-sensitive internal matter\n- MEDIUM: standard questions, FYI updates, routine requests\n- LOW: newsletters, automated notifications, low-urgency items\n- Classify as SPAM if unsolicited bulk mail or phishing"
+            },
+            {
+              "role": "user",
+              "content": "=From: {{ $('Extract & Filter New Emails').item.json.from }}\nTo: {{ $('Extract & Filter New Emails').item.json.to }}\nSubject: {{ $('Extract & Filter New Emails').item.json.subject }}\nDate: {{ $('Extract & Filter New Emails').item.json.date }}\n\nBody:\n{{ $('Extract & Filter New Emails').item.json.body }}"
+            }
+          ]
+        },
+        "options": { "temperature": 0.2 }
+      },
+      "id": "classify-gpt",
+      "name": "Classify & Summarize (GPT)",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.4,
+      "position": [1560, 300],
+      "credentials": {
+        "openAiApi": { "id": "YOUR_OPENAI_CREDENTIAL_ID", "name": "OpenAI" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst aiRaw = item.json.message?.content || '';\n\n// Restore original email fields (GPT node output overwrites $json)\nconst email = $('Extract & Filter New Emails').item.json;\n\nlet parsed;\ntry {\n  parsed = JSON.parse(aiRaw);\n} catch(e) {\n  parsed = {\n    category: 'OTHER',\n    priority: 'MEDIUM',\n    summary: 'Could not parse AI response.',\n    requires_response: false,\n    response_deadline: 'none',\n    suggested_assignee: 'none',\n    draft_reply: ''\n  };\n}\n\n// Map AI category to Gmail label ID.\n// Replace each placeholder with the actual label ID from your Gmail account.\n// To find a label ID: Gmail Settings → Labels → click label → ID is in the URL.\nconst labelMap = {\n  SUPPORT:    'YOUR_LABEL_ID_SUPPORT',\n  SALES:      'YOUR_LABEL_ID_SALES',\n  HR:         'YOUR_LABEL_ID_HR',\n  FINANCE:    'YOUR_LABEL_ID_FINANCE',\n  LEGAL:      'YOUR_LABEL_ID_LEGAL',\n  INTERNAL:   'YOUR_LABEL_ID_INTERNAL',\n  NEWSLETTER: 'YOUR_LABEL_ID_NEWSLETTER',\n  SPAM:       'YOUR_LABEL_ID_SPAM',\n  OTHER:      'YOUR_LABEL_ID_OTHER'\n};\n\nconst gmailLabelId = labelMap[parsed.category] ?? labelMap['OTHER'];\n\nreturn [{\n  json: {\n    ...email,\n    category: parsed.category,\n    priority: parsed.priority,\n    summary: parsed.summary,\n    requires_response: parsed.requires_response,\n    response_deadline: parsed.response_deadline,\n    suggested_assignee: parsed.suggested_assignee,\n    draft_reply: parsed.draft_reply || '',\n    gmailLabelId\n  }\n}];"
+      },
+      "id": "parse-ai",
+      "name": "Parse AI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "addLabels",
+        "messageId": "={{ $json.messageId }}",
+        "labelIds": ["={{ $json.gmailLabelId }}"]
+      },
+      "id": "apply-label",
+      "name": "Apply Gmail Label",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [2000, 300],
+      "credentials": {
+        "gmailOAuth2": { "id": "YOUR_GMAIL_CREDENTIAL_ID", "name": "Gmail" }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": { "__rl": true, "value": "YOUR_GOOGLE_SHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "EmailLog", "mode": "name" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "messageId": "={{ $json.messageId }}",
+            "subject": "={{ $json.subject }}",
+            "from": "={{ $json.from }}",
+            "date": "={{ $json.date }}",
+            "category": "={{ $json.category }}",
+            "priority": "={{ $json.priority }}",
+            "summary": "={{ $json.summary }}",
+            "requires_response": "={{ $json.requires_response }}",
+            "response_deadline": "={{ $json.response_deadline }}",
+            "suggested_assignee": "={{ $json.suggested_assignee }}",
+            "processedAt": "={{ $now.toISO() }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "log-to-sheet",
+      "name": "Log to Email Log Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [2220, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "YOUR_GSHEETS_CREDENTIAL_ID", "name": "Google Sheets" }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.priority }}",
+                    "rightValue": "CRITICAL",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "CRITICAL"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.priority }}",
+                    "rightValue": "HIGH",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "HIGH"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "route-priority",
+      "name": "Route by Priority",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [2440, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "channel": { "__rl": true, "value": "YOUR_SLACK_MANAGER_CHANNEL_ID", "mode": "id" },
+        "text": "=*🚨 CRITICAL Email — Immediate Attention Required*\n\n*From:* {{ $json.from }}\n*Subject:* {{ $json.subject }}\n*Category:* `{{ $json.category }}`\n*Assignee:* {{ $json.suggested_assignee }}\n*Deadline:* {{ $json.response_deadline }}\n\n*Summary:*\n>>> {{ $json.summary }}\n\n*Message ID:* `{{ $json.messageId }}`\n_A reply draft has been saved to your Gmail Drafts folder._",
+        "otherOptions": {}
+      },
+      "id": "notify-manager",
+      "name": "Notify Manager (Slack)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.1,
+      "position": [2660, 160],
+      "credentials": {
+        "slackApi": { "id": "YOUR_SLACK_CREDENTIAL_ID", "name": "Slack" }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "operation": "create",
+        "subject": "=Re: {{ $json.subject }}",
+        "emailType": "text",
+        "message": "={{ $json.draft_reply }}",
+        "toList": "={{ $json.from }}",
+        "additionalFields": {
+          "threadId": "={{ $json.threadId }}"
+        }
+      },
+      "id": "create-draft",
+      "name": "Create Draft Reply (Gmail)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [2880, 160],
+      "credentials": {
+        "gmailOAuth2": { "id": "YOUR_GMAIL_CREDENTIAL_ID", "name": "Gmail" }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "channel": { "__rl": true, "value": "YOUR_SLACK_TEAM_CHANNEL_ID", "mode": "id" },
+        "text": "=*📬 High Priority Email — Action Required*\n\n*From:* {{ $json.from }}\n*Subject:* {{ $json.subject }}\n*Category:* `{{ $json.category }}`\n*Assignee:* {{ $json.suggested_assignee }}\n*Deadline:* {{ $json.response_deadline }}\n\n*Summary:*\n>>> {{ $json.summary }}\n\n*Message ID:* `{{ $json.messageId }}`",
+        "otherOptions": {}
+      },
+      "id": "notify-team",
+      "name": "Notify Team (Slack)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.1,
+      "position": [2660, 440],
+      "credentials": {
+        "slackApi": { "id": "YOUR_SLACK_CREDENTIAL_ID", "name": "Slack" }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Google Sheets Setup\n\nCreate ONE Google Sheet with TWO tabs:\n\n**Tab 1: ProcessedEmails** (dedup log)\nColumns: messageId | subject | from | processedAt\n\n**Tab 2: EmailLog** (full audit trail)\nColumns: messageId | subject | from | date | category | priority | summary | requires_response | response_deadline | suggested_assignee | processedAt\n\nReplace YOUR_GOOGLE_SHEET_ID in all Google Sheets nodes.",
+        "height": 260,
+        "width": 500
+      },
+      "id": "sticky-sheets",
+      "name": "Sheets Setup",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [240, 60]
+    },
+    {
+      "parameters": {
+        "content": "## Gmail Labels Setup\n\nCreate these labels in Gmail before activating:\nSUPPORT | SALES | HR | FINANCE | LEGAL\nINTERNAL | NEWSLETTER | SPAM | OTHER\n\nThen paste each label's ID into the labelMap\nobject in the \"Parse AI Response\" node.\n\nHow to find a label ID:\nGmail → Settings → See all settings → Labels\n→ hover any label → ID appears in the URL\n(e.g. .../#label/Label_12345678)",
+        "height": 240,
+        "width": 420
+      },
+      "id": "sticky-labels",
+      "name": "Gmail Labels Setup",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [800, 60]
+    }
+  ],
+  "connections": {
+    "Every 5 Minutes": {
+      "main": [[{ "node": "Read Processed Emails Sheet", "type": "main", "index": 0 }]]
+    },
+    "Read Processed Emails Sheet": {
+      "main": [[{ "node": "Build Processed IDs Set", "type": "main", "index": 0 }]]
+    },
+    "Build Processed IDs Set": {
+      "main": [[{ "node": "Fetch Unread Emails", "type": "main", "index": 0 }]]
+    },
+    "Fetch Unread Emails": {
+      "main": [[{ "node": "Extract & Filter New Emails", "type": "main", "index": 0 }]]
+    },
+    "Extract & Filter New Emails": {
+      "main": [[{ "node": "Mark as Processed (Sheet)", "type": "main", "index": 0 }]]
+    },
+    "Mark as Processed (Sheet)": {
+      "main": [[{ "node": "Classify & Summarize (GPT)", "type": "main", "index": 0 }]]
+    },
+    "Classify & Summarize (GPT)": {
+      "main": [[{ "node": "Parse AI Response", "type": "main", "index": 0 }]]
+    },
+    "Parse AI Response": {
+      "main": [[{ "node": "Apply Gmail Label", "type": "main", "index": 0 }]]
+    },
+    "Apply Gmail Label": {
+      "main": [[{ "node": "Log to Email Log Sheet", "type": "main", "index": 0 }]]
+    },
+    "Log to Email Log Sheet": {
+      "main": [[{ "node": "Route by Priority", "type": "main", "index": 0 }]]
+    },
+    "Route by Priority": {
+      "main": [
+        [{ "node": "Notify Manager (Slack)", "type": "main", "index": 0 }],
+        [{ "node": "Notify Team (Slack)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Notify Manager (Slack)": {
+      "main": [[{ "node": "Create Draft Reply (Gmail)", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "YOUR_ERROR_WORKFLOW_ID"
+  }
+}
