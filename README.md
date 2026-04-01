@@ -1,6 +1,6 @@
 # n8n Automation Projects
 
-A collection of production n8n workflows built to automate real estate lead management, field service operations, email outreach tracking, lead response, content engagement, and inbox triage. Each project targets a specific business process and integrates multiple external services through a centralized architecture.
+A collection of production n8n workflows built to automate real estate lead management, field service operations, email outreach tracking, lead response, content engagement, inbox triage, and e-commerce recovery. Each project targets a specific business process and integrates multiple external services through a centralized architecture.
 
 ---
 
@@ -71,19 +71,23 @@ Polls a Gmail inbox every 5 minutes and runs each new unread email through **GPT
 **Trigger:** Schedule (every 5 min)
 **Output:** Gmail labeled + EmailLog updated + Slack alert + Draft reply saved (CRITICAL only)
 
+### 9. [Telegram Invoice Bot — CFDI Parser](n8n-telegram-invoice-bot/README.md)
+
+Telegram bot that receives photos or PDFs of Mexican invoices (CFDI) and extracts all fiscal data automatically. **Claude Sonnet 4.6** performs visual analysis of the document and returns a structured JSON. An **Information Extractor** node (backed by OpenRouter GPT-5.1) parses the typed fields. If the message has no attachment, the bot prompts the user to resend. On success, all data is upserted into **Google Sheets** keyed on the CFDI UUID, and a confirmation message is sent back to the user.
+
+**Key integrations:** Telegram Bot API, Anthropic Claude Sonnet 4.6, OpenRouter, Google Sheets
+**Trigger:** Telegram webhook (inbound message)
+**Output:** CFDI data upserted to Google Sheets + Telegram confirmation sent to user
+
 ---
 
-## Shared Infrastructure
+### 8. [Shopify Abandoned Checkout Recovery](n8n-Shopify-Abandoned-Checkout/n8n-Shopify-Abandoned-Checkout-Recovery.md)
 
-Several workflows share a common **Google Sheets master dataset** (`dataset_emails.csv`) as the central record of email leads. Each workflow interacts with it differently:
+Intercepts Shopify `checkout/update` webhooks and runs each abandoned cart through an AI self-improvement loop. **GPT-4o** generates a personalized recovery email referencing the customer's name, cart items, total, and discount codes. **GPT-4o-mini** then scores its persuasiveness (1–10) and provides a specific improvement suggestion. If the score is below 7 and fewer than 3 attempts have been made, the message is rewritten incorporating the feedback and re-evaluated. The best-scoring version is fired to **Klaviyo** as a custom event, which triggers the actual email delivery via a Klaviyo flow. Every attempt is logged in **Airtable** with score, suggestion, and final status.
 
-| Workflow | Operation | Match Key |
-|---|---|---|
-| Lead Automation | Append new leads | — |
-| Instantly Sheets | Update reply status | `email` |
-| Google Guaranteed Leads | Append contacted leads | `phone` |
-
-The **Internal System** (staging API) is used by both the Email Automation and Operation System workflows for authentication, order retrieval, and status recording.
+**Key integrations:** Shopify Admin API, OpenAI GPT-4o + GPT-4o-mini, Klaviyo Events API, Airtable
+**Trigger:** Shopify webhook (`checkouts/update`)
+**Output:** Personalized recovery email fired to Klaviyo + full Airtable audit trail
 
 ---
 
@@ -92,10 +96,11 @@ The **Internal System** (staging API) is used by both the Email Automation and O
 | Layer | Tools |
 |---|---|
 | Automation platform | n8n |
-| AI / LLM | OpenAI GPT-4.1-mini, GPT-4o, GPT-4o-mini, GPT-5-mini |
-| Communication | WhatsApp Business API, Gmail, Twilio SMS, Slack |
-| CRM / Outreach | EasyBroker, Instantly |
+| AI / LLM | OpenAI GPT-4.1-mini, GPT-4o, GPT-4o-mini, GPT-5-mini, Anthropic Claude Sonnet 4.6 |
+| Communication | WhatsApp Business API, Gmail, Twilio SMS, Slack, Telegram Bot API |
+| CRM / Outreach | EasyBroker, Instantly, Klaviyo |
+| E-commerce | Shopify Admin API |
 | Field Service | Zoho FSM |
-| Data storage | Google Sheets |
+| Data storage | Google Sheets, Airtable |
 | Internal backend | Internal System API (staging) |
 

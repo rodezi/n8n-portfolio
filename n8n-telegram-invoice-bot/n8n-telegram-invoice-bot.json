@@ -1,0 +1,812 @@
+{
+  "name": "TelegramBot - Facturacion Parser",
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond-has-file",
+              "leftValue": "={{ $json.message.document !== undefined || $json.message.photo !== undefined }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "55bf70dc-50d5-480f-8a5b-7be3c8d174e4",
+      "name": "¿Tiene archivo?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -48,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Manda Fotografia').item.json.message.chat.id }}",
+        "text": "⚠️ Por favor envía una imagen o PDF de la factura.",
+        "additionalFields": {}
+      },
+      "id": "1ae7f3e0-fd47-4bcb-bf19-784ce3395e66",
+      "name": "Aviso sin archivo",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -48,
+        736
+      ],
+      "webhookId": "ad12e6cf-dafd-4259-a892-b043166581e6",
+      "credentials": {
+        "telegramApi": {
+          "id": "z8sDEBsOutM6Yuvz",
+          "name": "Telegram Bot Facturacion"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-5.1",
+        "options": {
+          "maxTokens": 2000,
+          "temperature": 0
+        }
+      },
+      "id": "30c289a6-3170-4f34-aeba-03c452bfbd22",
+      "name": "OpenRouter Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        320,
+        656
+      ],
+      "credentials": {
+        "openRouterApi": {
+          "id": "r6VN1fLIbmwmjiE2",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1CskbE9WpJFtc08mbvo5Tg6swGt3LWTnEEzXjg7eeOik",
+          "mode": "list",
+          "cachedResultName": "Facturas Template",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1CskbE9WpJFtc08mbvo5Tg6swGt3LWTnEEzXjg7eeOik/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1541888768,
+          "mode": "list",
+          "cachedResultName": "Facturas recibidas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1CskbE9WpJFtc08mbvo5Tg6swGt3LWTnEEzXjg7eeOik/edit#gid=1541888768"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "fecha_pago": "={{ $json.output.fecha_emision }}",
+            "rfc_emisor": "={{ $json.output.rfc_emisor }}",
+            "razon_social_emisor": "={{ $json.output.razon_social_emisor }}",
+            "regimen_fiscal_emisor": "={{ $json.output.regimen_fiscal_emisor }}",
+            "folio_fiscal_uuid": "={{ $json.output.serie_folio }}",
+            "moneda": "={{ $json.output.moneda }}",
+            "metodo_pago": "=",
+            "fecha_emision": "={{ $json.output.fecha_emision }}",
+            "serie_folio": "={{ $json.output.serie_folio }}",
+            "descripcion_concepto": "={{ $json.output.descripcion_concepto }}",
+            "clave_sat": "={{ $json.output.clave_sat }}",
+            "cantidad": "={{ $json.output.cantidad }}",
+            "unidad": "={{ $json.output.unidad }}",
+            "iva_16": "={{ $json.output.iva_16 }}",
+            "isr_retenido": "={{ $json.output.isr_retenido }}",
+            "iva_retenido": "={{ $json.output.iva_retenido }}",
+            "total": "={{ $json.output.total }}",
+            "subtotal": "={{ $json.output.subtotal }}",
+            "forma_pago": "={{ $json.output.forma_pago }}",
+            "enviado_por": "={{ $('Manda Fotografia').item.json.message.chat.first_name }} {{ $('Manda Fotografia').item.json.message.chat.last_name }}",
+            "fecha_procesamiento": "={{ $today }}"
+          },
+          "matchingColumns": [
+            "folio_fiscal_uuid"
+          ],
+          "schema": [
+            {
+              "id": "id_registro",
+              "displayName": "id_registro",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "fecha_procesamiento",
+              "displayName": "fecha_procesamiento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "archivo_original",
+              "displayName": "archivo_original",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "enviado_por",
+              "displayName": "enviado_por",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "rfc_emisor",
+              "displayName": "rfc_emisor",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "razon_social_emisor",
+              "displayName": "razon_social_emisor",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "regimen_fiscal_emisor",
+              "displayName": "regimen_fiscal_emisor",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "folio_fiscal_uuid",
+              "displayName": "folio_fiscal_uuid",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "serie_folio",
+              "displayName": "serie_folio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "fecha_emision",
+              "displayName": "fecha_emision",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "uso_cfdi",
+              "displayName": "uso_cfdi",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "forma_pago",
+              "displayName": "forma_pago",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "metodo_pago",
+              "displayName": "metodo_pago",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "moneda",
+              "displayName": "moneda",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "descripcion_concepto",
+              "displayName": "descripcion_concepto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "clave_sat",
+              "displayName": "clave_sat",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "cantidad",
+              "displayName": "cantidad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "unidad",
+              "displayName": "unidad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "subtotal",
+              "displayName": "subtotal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "iva_16",
+              "displayName": "iva_16",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "isr_retenido",
+              "displayName": "isr_retenido",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "iva_retenido",
+              "displayName": "iva_retenido",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "total",
+              "displayName": "total",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "categoria_gasto",
+              "displayName": "categoria_gasto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "estatus",
+              "displayName": "estatus",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "notas_validacion",
+              "displayName": "notas_validacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "pagada",
+              "displayName": "pagada",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "fecha_pago",
+              "displayName": "fecha_pago",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "useAppend": true
+        }
+      },
+      "id": "7eabe0a3-957e-4590-8e7d-10f92eec706e",
+      "name": "Sheets — Registrar",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        608,
+        512
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xZrJNQBTNR10CH8E",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Manda Fotografia').item.json.message.chat.id }}",
+        "text": "✅ *Factura registrada correctamente*",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "26c70e8f-e075-477f-86d5-082a03133b0f",
+      "name": "Telegram — Confirmación OK",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        784,
+        512
+      ],
+      "webhookId": "cd3da6b2-8239-4d59-be34-2ec8f0fdc449",
+      "credentials": {
+        "telegramApi": {
+          "id": "z8sDEBsOutM6Yuvz",
+          "name": "Telegram Bot Facturacion"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -208,
+        528
+      ],
+      "id": "1971df64-95e3-4890-b306-b4df7e457303",
+      "name": "Wait",
+      "webhookId": "5dd1d8c1-5277-4d4f-8e6f-3db355f4f4bd"
+    },
+    {
+      "parameters": {
+        "content": "# Realtek \n## TelegramBot - Facturacion",
+        "height": 560,
+        "width": 1424
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -448,
+        400
+      ],
+      "typeVersion": 1,
+      "id": "76889965-7738-4d0f-8ee7-43be0846e96e",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {
+          "download": true
+        }
+      },
+      "id": "2534bec2-8867-4439-bcce-807412062dd9",
+      "name": "Manda Fotografia",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -368,
+        528
+      ],
+      "webhookId": "7d8f8f59-0b83-4079-b385-46cfba856623",
+      "credentials": {
+        "telegramApi": {
+          "id": "z8sDEBsOutM6Yuvz",
+          "name": "Telegram Bot Facturacion"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "modelId": {
+          "__rl": true,
+          "value": "claude-sonnet-4-6",
+          "mode": "list",
+          "cachedResultName": "claude-sonnet-4-6"
+        },
+        "text": "Eres un extractor de datos fiscales mexicanos (CFDI). \nAnaliza la imagen o PDF recibido y devuelve ÚNICAMENTE un objeto JSON válido, \nsin texto adicional, sin markdown, sin explicaciones.\n\nExtrae exactamente estos campos:\n{\n  \"rfc_emisor\": \"\",\n  \"razon_social_emisor\": \"\",\n  \"regimen_fiscal_emisor\": \"\",\n  \"folio_fiscal_uuid\": \"\",\n  \"serie_folio\": \"\",\n  \"fecha_emision\": \"YYYY-MM-DD\",\n  \"uso_cfdi\": \"\",\n  \"forma_pago\": \"\",\n  \"metodo_pago\": \"\",\n  \"moneda\": \"MXN\",\n  \"descripcion_concepto\": \"\",\n  \"clave_sat\": \"\",\n  \"cantidad\": 0,\n  \"unidad\": \"\",\n  \"subtotal\": 0.00,\n  \"iva_16\": 0.00,\n  \"isr_retenido\": 0.00,\n  \"iva_retenido\": 0.00,\n  \"total\": 0.00\n}\n\nSi un campo no está visible o no aplica, devuelve null para strings \ny 0 para números. Nunca inventes datos.",
+        "inputType": "binary",
+        "simplify": false,
+        "options": {
+          "maxTokens": 1024
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
+      "position": [
+        144,
+        512
+      ],
+      "id": "f396fcf6-89f0-4220-a41b-999ca683cb68",
+      "name": "Analiza Imagen",
+      "credentials": {
+        "anthropicApi": {
+          "id": "L6uWpsm4R1xYB6f9",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.content[0].text }}",
+        "attributes": {
+          "attributes": [
+            {
+              "name": "rfc_emisor",
+              "description": "RFC del emisor de la factura"
+            },
+            {
+              "name": "razon_social_emisor",
+              "description": "Razón social o nombre del emisor"
+            },
+            {
+              "name": "regimen_fiscal_emisor",
+              "description": "Código de régimen fiscal del emisor (ej. 601)"
+            },
+            {
+              "name": "folio_fiscal_uuid",
+              "description": "UUID del CFDI de 36 caracteres"
+            },
+            {
+              "name": "serie_folio",
+              "description": "Serie y folio del comprobante (ej. A-1042)"
+            },
+            {
+              "name": "fecha_emision",
+              "description": "Fecha de emisión en formato YYYY-MM-DD"
+            },
+            {
+              "name": "uso_cfdi",
+              "description": "Clave y descripción del uso CFDI (ej. G03 - Gastos en general)"
+            },
+            {
+              "name": "forma_pago",
+              "description": "Código y descripción de forma de pago (ej. 03 - Transferencia)"
+            },
+            {
+              "name": "metodo_pago",
+              "description": "PUE o PPD"
+            },
+            {
+              "name": "moneda",
+              "description": "Moneda del comprobante, generalmente MXN"
+            },
+            {
+              "name": "descripcion_concepto",
+              "description": "Descripción del concepto o servicio facturado"
+            },
+            {
+              "name": "clave_sat",
+              "description": "Clave SAT del producto o servicio"
+            },
+            {
+              "name": "cantidad",
+              "type": "number",
+              "description": "Cantidad de unidades del concepto"
+            },
+            {
+              "name": "unidad",
+              "description": "Unidad de medida (ej. PZA, SER, E48)"
+            },
+            {
+              "name": "subtotal",
+              "type": "number",
+              "description": "Subtotal antes de impuestos"
+            },
+            {
+              "name": "iva_16",
+              "type": "number",
+              "description": "Monto de IVA al 16%"
+            },
+            {
+              "name": "isr_retenido",
+              "type": "number",
+              "description": "Monto de ISR retenido, 0 si no aplica"
+            },
+            {
+              "name": "iva_retenido",
+              "type": "number",
+              "description": "Monto de IVA retenido, 0 si no aplica"
+            },
+            {
+              "name": "total",
+              "type": "number",
+              "description": "Total del comprobante incluyendo impuestos"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "462aee19-7aae-4f3d-9f75-052d8dcfb622",
+      "name": "Extractor",
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1,
+      "position": [
+        320,
+        512
+      ]
+    }
+  ],
+  "pinData": {
+    "Manda Fotografia": [
+      {
+        "json": {
+          "update_id": 818230952,
+          "message": {
+            "message_id": 3,
+            "from": {
+              "id": 6900434382,
+              "is_bot": false,
+              "first_name": "Rodrigo",
+              "last_name": "Zayas",
+              "username": "rodezayas",
+              "language_code": "en"
+            },
+            "chat": {
+              "id": 6900434382,
+              "first_name": "Rodrigo",
+              "last_name": "Zayas",
+              "username": "rodezayas",
+              "type": "private"
+            },
+            "date": 1774983839,
+            "photo": [
+              {
+                "file_id": "AgACAgEAAxkBAAMDacwan5NCu_niItBeTXPlSvf-e1MAAvkLaxsdr2FGhmul4e2ntRkBAAMCAANzAAM6BA",
+                "file_unique_id": "AQAD-QtrGx2vYUZ4",
+                "file_size": 774,
+                "width": 67,
+                "height": 90
+              },
+              {
+                "file_id": "AgACAgEAAxkBAAMDacwan5NCu_niItBeTXPlSvf-e1MAAvkLaxsdr2FGhmul4e2ntRkBAAMCAANtAAM6BA",
+                "file_unique_id": "AQAD-QtrGx2vYUZy",
+                "file_size": 13897,
+                "width": 240,
+                "height": 320
+              },
+              {
+                "file_id": "AgACAgEAAxkBAAMDacwan5NCu_niItBeTXPlSvf-e1MAAvkLaxsdr2FGhmul4e2ntRkBAAMCAAN4AAM6BA",
+                "file_unique_id": "AQAD-QtrGx2vYUZ9",
+                "file_size": 62413,
+                "width": 600,
+                "height": 800
+              },
+              {
+                "file_id": "AgACAgEAAxkBAAMDacwan5NCu_niItBeTXPlSvf-e1MAAvkLaxsdr2FGhmul4e2ntRkBAAMCAAN5AAM6BA",
+                "file_unique_id": "AQAD-QtrGx2vYUZ-",
+                "file_size": 110033,
+                "width": 960,
+                "height": 1280
+              }
+            ]
+          }
+        },
+        "binary": {
+          "data": {
+            "mimeType": "image/jpeg",
+            "fileType": "image",
+            "fileExtension": "jpg",
+            "data": "database",
+            "fileName": "file_0.jpg",
+            "id": "database:6f2dd317-4b4b-4651-a6f0-cd71c4323083",
+            "fileSize": "62.4 kB",
+            "bytes": 62413
+          }
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "¿Tiene archivo?": {
+      "main": [
+        [
+          {
+            "node": "Analiza Imagen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Aviso sin archivo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Extractor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheets — Registrar": {
+      "main": [
+        [
+          {
+            "node": "Telegram — Confirmación OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "¿Tiene archivo?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manda Fotografia": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analiza Imagen": {
+      "main": [
+        [
+          {
+            "node": "Extractor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extractor": {
+      "main": [
+        [
+          {
+            "node": "Sheets — Registrar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "e3b7dc19-70a0-4b44-858d-c85cd5ccbc0e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0f2b7acf1a4c6b0ee0cc3c6681475c3188c6e94dc05c18b6edd0443ba38705aa"
+  },
+  "id": "pFIBwMed32rSDsgY",
+  "tags": []
+}
