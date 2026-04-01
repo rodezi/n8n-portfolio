@@ -2,7 +2,7 @@
 
 Telegram bot that receives photos or PDFs of Mexican invoices (CFDI), extracts fiscal data using AI, and automatically records it in Google Sheets.
 
-**Bot:** [@realtek_facturabot](https://web.telegram.org/k/#@realtek_facturabot)
+**Bot:** t.me/realtek_facturabot
 
 ---
 
