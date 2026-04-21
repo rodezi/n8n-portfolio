@@ -1,0 +1,932 @@
+{
+  "name": "Gmail Webhook Flow",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "q": "subject:solicitud"
+        },
+        "options": {
+          "dataPropertyAttachmentsPrefixName": "attachment_0",
+          "downloadAttachments": true
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        1392,
+        9616
+      ],
+      "id": "37487b96-f71a-41d8-90a9-a01590c9cee9",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "DljII3dYIWU80hLD",
+          "name": "Gmail Servicios Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const html = $('Gmail Trigger').first().json.html\n\nif (!html) {\n  return [{ json: { error: \"No HTML found\" } }];\n}\n\n// Extraer todas las tablas\nconst tableMatches = html.match(/<table[\\s\\S]*?<\\/table>/gi) || [];\n\nconst tables = tableMatches.map(tableHtml => {\n  const rows = [];\n  const rowMatches = tableHtml.match(/<tr[\\s\\S]*?<\\/tr>/gi) || [];\n\n  rowMatches.forEach(rowHtml => {\n    const cells = [];\n    const cellMatches = rowHtml.match(/<(td|th)[\\s\\S]*?<\\/(td|th)>/gi) || [];\n\n    cellMatches.forEach(cell => {\n      const text = cell\n        .replace(/<[^>]+>/g, '')\n        .replace(/\\s+/g, ' ')\n        .trim();\n      cells.push(text);\n    });\n\n    if (cells.length) rows.push(cells);\n  });\n\n  return rows;\n});\n\nreturn [{\n  json: {\n    tables,\n    tablesFound: tables.length\n  }\n}];\n\n\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2128,
+        9296
+      ],
+      "id": "437e6a6b-b419-407b-b89f-2f95a09bbee6",
+      "name": "Extractor de Tablas"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2128,
+        10144
+      ],
+      "id": "9e9fcd68-0704-4fab-a9ba-92fbb7994461",
+      "name": "No Operation, do nothing"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c5973f16-cd87-4ba4-837a-bd49830ba54e",
+              "name": "OS_Servicio",
+              "value": "attachment",
+              "type": "binary"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2128,
+        9952
+      ],
+      "id": "1160d971-4f3b-47d1-82d3-724fa58c21dd",
+      "name": "xlsx",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filtra solo items con binario .xlsx o .csv y normaliza la key a \"attachment\"\nconst results = [];\n\nfor (const item of $input.all()) {\n  const binaryData = item.binary || {};\n  for (const key of Object.keys(binaryData)) {\n    const bin = binaryData[key];\n    const filename = (bin.fileName || \"\").toLowerCase();\n    const mimeType = (bin.mimeType || \"\").toLowerCase();\n\n    const isXlsx = filename.endsWith(\".xlsx\") && mimeType.indexOf(\"spreadsheetml\") !== -1;\n    const isCsv  = filename.endsWith(\".csv\")  || mimeType.indexOf(\"text/csv\") !== -1 || mimeType.indexOf(\"csv\") !== -1;\n\n    if (!isXlsx && !isCsv) continue;\n\n    results.push({\n      json: item.json,\n      binary: { attachment: bin }\n    });\n    break;\n  }\n}\n\nif (results.length === 0) {\n  return [{ json: { message: \"No se encontraron archivos .xlsx ni .csv\" } }];\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        9616
+      ],
+      "id": "4ab02752-f57e-4277-a162-6d50c52ab4b8",
+      "name": "Extractor xlsx"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://stg.saiv3api.imagendinamica.mx/api/serviceorders/readexcelorder",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "={\n  \"Accept\": \"application/json\",\n  \"Authorization\": \"Bearer {{ $json.access_token }}\"\n} ",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "template file",
+              "inputDataFieldName": "OS_Servicio"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2480,
+        9872
+      ],
+      "id": "85b7ba47-7541-423a-8086-33fe610d0114",
+      "name": "Conector xlsx",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// DEBUG — ver estructura real de tablas\nconst inputItems = $input.all();\nconst allTables = [];\n\ninputItems.forEach((item) => {\n  const tables = item.json.tables;\n  if (Array.isArray(tables)) allTables.push(...tables);\n});\n\nreturn [{ json: { \n  tables: allTables,\n  tablesFound: allTables.length,\n  // Vista fácil de leer\n  preview: allTables.map((table, ti) => ({\n    tabla: ti,\n    filas: table.map((row, ri) => ({\n      fila: ri,\n      celdas: row\n    }))\n  }))\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2304,
+        9296
+      ],
+      "id": "bf646677-e462-490f-a40c-f9627fca942b",
+      "name": "Estandarizador de Columnas"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2304,
+        9872
+      ],
+      "id": "a176c690-380a-48ab-ae32-e6be1797faf0",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        2688,
+        10000
+      ],
+      "id": "db8de330-395b-4ce1-bd2d-6791e0543858",
+      "name": "OpenAI Chat Model4",
+      "credentials": {
+        "openAiApi": {
+          "id": "zYUG89DVjYhcaX8q",
+          "name": "IDin OpenAI Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Nodo Directo Gmail (Polling) \n",
+        "height": 272,
+        "width": 260
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1312,
+        9520
+      ],
+      "typeVersion": 1,
+      "id": "96468e45-4fb0-46ef-ada8-5d4070aae37a",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.SAIv3_URLbase_stg }}/login",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "email",
+              "value": "ext-n8n1@imagendinamica.com"
+            },
+            {
+              "name": "password",
+              "value": "@7q7dU5(\"bH1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2128,
+        9776
+      ],
+      "id": "e8ef220a-5ca3-4d71-a8cc-f8f40aa1a3c2",
+      "name": "SAI Autenticacion",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "jsCode": "var tables = $input.first().json.tables || [];\nif (tables.length === 0) return [{ json: { error: 'Sin tablas' } }];\n\n// ═══════════════════════════════════════════════════\n// NORMALIZADOR\n// ═══════════════════════════════════════════════════\nfunction norm(s) {\n  return (s || '').toString().toLowerCase().trim()\n    .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '')\n    .replace(/[^a-z0-9\\s]/g, ' ').replace(/\\s+/g, ' ').trim();\n}\n\n// ═══════════════════════════════════════════════════\n// SELECCIÓN INTELIGENTE DE TABLA\n// Elige la tabla con más headers reconocidos\n// ═══════════════════════════════════════════════════\nvar keyHeaders = [\n  'no. serie','no serie','serie','fecha','hora','actividad','tipo de orden',\n  'cliente','correo','modelo','ingeniero','nombre','email','folio','servicio'\n];\n\nvar bestTable = tables[0];\nvar bestScore = 0;\n\nfor (var ti = 0; ti < tables.length; ti++) {\n  var t = tables[ti];\n  if (!t || !t[0] || t.length < 2) continue;\n  var score = 0;\n  for (var hi = 0; hi < t[0].length; hi++) {\n    var hn = norm(t[0][hi] || '');\n    for (var ki = 0; ki < keyHeaders.length; ki++) {\n      if (hn.indexOf(keyHeaders[ki]) !== -1) { score++; break; }\n    }\n  }\n  if (score > bestScore) { bestScore = score; bestTable = t; }\n}\n\nvar table = bestTable;\nif (table.length < 2) return [{ json: { error: 'Tabla vacia o sin datos' } }];\n\nvar rawHeaders = table[0];\nvar dataRows   = table.slice(1);\n\n// ═══════════════════════════════════════════════════\n// LIMPIEZA\n// ═══════════════════════════════════════════════════\nfunction clean(v) {\n  if (v === null || v === undefined) return null;\n  var s = String(v).trim();\n  var nulls = ['', 'n/a', 'no aplica', 's/n', '.', 'na', 'ninguno', 'ninguna'];\n  return nulls.indexOf(s.toLowerCase()) !== -1 ? null : s;\n}\n\nfunction cleanDate(v) {\n  if (!v) return null;\n  var s = String(v).trim();\n  if (/^\\d{4}-\\d{2}-\\d{2}$/.test(s)) return s;\n  var p = s.split('/');\n  if (p.length === 3 && p[2].length === 4) {\n    return p[2] + '-' + p[1].padStart(2,'0') + '-' + p[0].padStart(2,'0');\n  }\n  var meses = {\n    'ene':'01','enero':'01','jan':'01','feb':'02','febrero':'02',\n    'mar':'03','marzo':'03','abr':'04','abril':'04','apr':'04',\n    'may':'05','mayo':'05','jun':'06','junio':'06',\n    'jul':'07','julio':'07','ago':'08','agosto':'08','aug':'08',\n    'sep':'09','sept':'09','septiembre':'09','oct':'10','octubre':'10',\n    'nov':'11','noviembre':'11','dic':'12','diciembre':'12','dec':'12'\n  };\n  var partes = s.toLowerCase().split(/[\\s\\-\\/]+/);\n  if (partes.length === 3 && meses[partes[1]]) {\n    return partes[2].padStart(4,'0') + '-' + meses[partes[1]] + '-' + partes[0].padStart(2,'0');\n  }\n  return null;\n}\n\nfunction cleanTime(v) {\n  if (!v) return null;\n  var s = String(v).trim().toUpperCase();\n  var hasPM = s.indexOf('PM') !== -1;\n  var hasAM = s.indexOf('AM') !== -1;\n  s = s.replace('AM','').replace('PM','').trim();\n  var parts = s.split(':');\n  if (parts.length < 2) return null;\n  var h = parseInt(parts[0]);\n  var min = (parts[1] || '00').slice(0,2);\n  var sec = (parts[2] || '00').slice(0,2);\n  if (hasPM && h !== 12) h = h + 12;\n  if (hasAM && h === 12) h = 0;\n  return String(h).padStart(2,'0') + ':' + min + ':' + sec;\n}\n\n// ═══════════════════════════════════════════════════\n// PARSER DIRECCIÓN\n// ═══════════════════════════════════════════════════\nfunction parseDireccion(dir) {\n  dir = dir || '';\n  var addr_street = null, addr_extnum = null, neighborhood = null, zip_code = null;\n  var iHash = dir.indexOf('#');\n  if (iHash !== -1) {\n    addr_street = dir.slice(0, iHash).trim();\n    addr_extnum = dir.slice(iHash + 1).trim().split(/[\\s,]/)[0];\n  } else {\n    var mNo = dir.match(/\\bNum?\\.?\\s*(\\w+)/i);\n    if (mNo) {\n      addr_extnum = mNo[1];\n      addr_street = dir.slice(0, dir.indexOf(mNo[0])).trim();\n    }\n  }\n  var dirUp = dir.toUpperCase();\n  var colIdx = -1, colLen = 0;\n  var colPats = ['COL. ','COL.','COLONIA '];\n  for (var ci = 0; ci < colPats.length; ci++) {\n    var idx = dirUp.indexOf(colPats[ci]);\n    if (idx !== -1) { colIdx = idx; colLen = colPats[ci].length; break; }\n  }\n  var cpIdx = -1, cpLen = 0;\n  var cpPats = ['C.P. ','C.P.','CODIGO POSTAL ','ZIP ',' CP '];\n  for (var cpi = 0; cpi < cpPats.length; cpi++) {\n    var idxcp = dirUp.indexOf(cpPats[cpi]);\n    if (idxcp !== -1) { cpIdx = idxcp; cpLen = cpPats[cpi].length; break; }\n  }\n  if (colIdx !== -1 && cpIdx !== -1 && cpIdx > colIdx) {\n    neighborhood = dir.slice(colIdx + colLen, cpIdx).trim();\n  } else if (colIdx !== -1) {\n    neighborhood = dir.slice(colIdx + colLen).split(',')[0].trim();\n  }\n  if (cpIdx !== -1) {\n    var afterCP = dir.slice(cpIdx + cpLen).trim();\n    var cpVal = afterCP.split(/[\\s,]/)[0];\n    if (cpVal && !isNaN(cpVal)) zip_code = cpVal;\n  }\n  return { addr_street: clean(addr_street), addr_extnum: clean(addr_extnum), neighborhood: clean(neighborhood), zip_code: clean(zip_code) };\n}\n\n// ═══════════════════════════════════════════════════\n// RESOLVERS\n// ═══════════════════════════════════════════════════\nfunction resolveCustomer(id, cliente) {\n  var prefijos = { 'PH':'BANORTE','BX':'BBVA','SN':'SANTANDER','HB':'HSBC','SC':'SCOTIABANK','BM':'BANAMEX' };\n  if (id) {\n    var prefix = String(id).slice(0,2).toUpperCase();\n    if (prefijos[prefix]) return prefijos[prefix];\n  }\n  return clean(cliente) || clean(id);\n}\n\nfunction resolveServiceType(v) {\n  var t = (v || '').toUpperCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'');\n  if (t.indexOf('SUMINISTRO') !== -1)    return 'SUMINISTRO';\n  if (t.indexOf('INSTALACION') !== -1)   return 'INSTALACION';\n  if (t.indexOf('TRASLADO') !== -1)      return 'TRASLADO';\n  if (t.indexOf('TRANSPORTE') !== -1)    return 'TRANSPORTE';\n  if (t.indexOf('RETIRO') !== -1)        return 'RETIRO';\n  if (t.indexOf('BAJA') !== -1)          return 'RETIRO';\n  if (t.indexOf('MANTENIMIENTO') !== -1) return 'MANTENIMIENTO';\n  if (t.indexOf('CORRECTIVO') !== -1)    return 'MANTENIMIENTO';\n  if (t.indexOf('ACTIVACION') !== -1)    return 'ACTIVACION';\n  if (t.indexOf('ALTA') !== -1)          return 'ACTIVACION';\n  if (t.indexOf('REEMPLAZO') !== -1)     return 'REEMPLAZO';\n  if (t.indexOf('CAMBIO') !== -1)        return 'REEMPLAZO';\n  return null;\n}\n\nfunction resolveStatus(v) {\n  if (!v) return 'DISPONIBLE';\n  var validos = ['EN SERVICIO','REMOZADO','DISPONIBLE','EN INSTALACION','ACTIVO','BASE DE METAL','BAJA'];\n  var upper = String(v).toUpperCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'');\n  for (var i = 0; i < validos.length; i++) {\n    if (upper.indexOf(validos[i]) !== -1) return validos[i];\n  }\n  return v;\n}\n\n// ═══════════════════════════════════════════════════\n// MAPA DE SINÓNIMOS — campos simples\n// ═══════════════════════════════════════════════════\nvar SIMPLE_MAP = {\n  // Orden\n  'cliente':'CLIENTE', 'empresa':'CLIENTE', 'banco':'CLIENTE',\n  'id':'ID', 'folio':'FOLIO', 'clave':'ID',\n  'tipo de orden':'SO_TYPE', 'tipo orden':'SO_TYPE', 'actividad':'SO_TYPE',\n  'actividad a realizar':'SO_TYPE',\n  'servicio':'SERVICIO', 'tipo de servicio':'SERVICIO',\n  'fecha':'FECHA', 'fecha de cita':'FECHA', 'fecha cita':'FECHA',\n  'fecha instalacion':'FECHA', 'fecha de instalacion':'FECHA', 'fecha programada':'FECHA',\n  'fecha de atencion':'FECHA', 'fecha atencion':'FECHA',\n  'hora':'HORA', 'hora de cita':'HORA', 'hora cita':'HORA', 'hora instalacion':'HORA',\n  // Implantador\n  'correo':'EMAIL', 'email':'EMAIL', 'correo electronico':'EMAIL', 'e mail':'EMAIL',\n  'correo implantador':'EMAIL',\n  'telefono':'TELEFONO', 'tel':'TELEFONO', 'celular':'TELEFONO',\n  'nombre':'NOMBRE_IMP', 'nombre implantador':'NOMBRE_IMP', 'implantador':'NOMBRE_IMP',\n  'ingeniero':'NOMBRE_IMP',\n  'segundo nombre':'MIDNAME', 'segundo nombre implantador':'MIDNAME',\n  'apellido':'APELLIDO', 'apellido paterno':'APELLIDO',\n  'apellido materno':'APELLIDO_MAT',\n  // Destino simple (sin prefijo)\n  'direccion':'DIRECCION', 'domicilio':'DIRECCION',\n  'calle':'CALLE', 'numero exterior':'NUM_EXT', 'num exterior':'NUM_EXT', 'no exterior':'NUM_EXT',\n  'numero interior':'NUM_INT', 'no interior':'NUM_INT',\n  'colonia':'COLONIA', 'col':'COLONIA',\n  'ciudad':'CIUDAD', 'estado':'ESTADO',\n  'municipio':'MUNICIPIO', 'delegacion':'MUNICIPIO', 'municipio delegacion':'MUNICIPIO',\n  'cp':'CP', 'codigo postal':'CP', 'c p':'CP', 'zip':'CP',\n  'nivel':'NIVEL', 'nivel cajero':'NIVEL', 'nivel donde se encontrara el cajero':'NIVEL',\n  'ubicacion':'NOMBRE', 'nombre ubicacion':'NOMBRE', 'sucursal':'NOMBRE',\n  'lugar de instalacion':'NOMBRE', 'lugar instalacion':'NOMBRE',\n  // Equipo simple (sin prefijo Eq1/Eq2)\n  'serie':'SERIE', 'no serie':'SERIE', 'no. serie':'SERIE',\n  'numero de serie':'SERIE', 'serial':'SERIE',\n  'modelo':'MODELO', 'formato':'FORMATO', 'tipo':'FORMATO', 'subtipo':'FORMATO',\n  'tipo de cabina':'FORMATO',\n  'base':'BASE', 'estatus':'BASE', 'estado del inventario':'BASE',\n  'estatus de cierre':'BASE',\n  'marca':'MARCA', 'id externo':'ID_EXTERNO',\n  'monta carga o escalera':'MONTA', 'monta carga':'MONTA', 'monta':'MONTA', 'escalera':'MONTA',\n  // Campos adicionales de clientes externos\n  'proveedor':'CLIENTE', 'confirmacion proveedor':'CLIENTE',\n  'pendiente de fabricacion':'BASE',\n  // Ignorar columnas de control interno\n  'mes':'_IGNORAR', 'software':'_IGNORAR',\n  // Geo\n  'latitud':'LATITUD', 'lat':'LATITUD', 'longitud':'LONGITUD', 'lon':'LONGITUD'\n};\n\n// ═══════════════════════════════════════════════════\n// DETECTAR TIPO DE HEADER\n// ═══════════════════════════════════════════════════\nfunction classifyHeader(raw) {\n  var n = norm(raw);\n\n  var origenPrefixes = ['origen '];\n  for (var oi = 0; oi < origenPrefixes.length; oi++) {\n    if (n.indexOf(origenPrefixes[oi]) === 0) {\n      return { type: 'origen', field: norm(n.slice(origenPrefixes[oi].length)) };\n    }\n  }\n\n  var destinoPrefixes = ['destino '];\n  for (var di = 0; di < destinoPrefixes.length; di++) {\n    if (n.indexOf(destinoPrefixes[di]) === 0) {\n      return { type: 'destino', field: norm(n.slice(destinoPrefixes[di].length)) };\n    }\n  }\n\n  var eqMatch = n.match(/^eq(?:uipo)?\\s*(\\d+)\\s+(.+)$/);\n  if (eqMatch) {\n    return { type: 'equipo', eqNum: parseInt(eqMatch[1]), field: eqMatch[2] };\n  }\n\n  var premisaMatch = n.match(/^premisa\\s*(\\d+)\\s*(comentario)?$/);\n  if (premisaMatch) {\n    return { type: 'premisa', num: parseInt(premisaMatch[1]), isComment: !!premisaMatch[2] };\n  }\n\n  var reqMatch = n.match(/^requerimiento\\s*(\\d+)\\s*(comentario)?$/);\n  if (reqMatch) {\n    return { type: 'premisa', num: parseInt(reqMatch[1]), isComment: !!reqMatch[2] };\n  }\n\n  if (SIMPLE_MAP[n]) {\n    // Campos marcados para ignorar\n    if (SIMPLE_MAP[n] === '_IGNORAR') return { type: 'unknown', raw: raw };\n    return { type: 'simple', field: SIMPLE_MAP[n] };\n  }\n\n  return { type: 'unknown', raw: raw };\n}\n\nfunction mapAddressField(field) {\n  var addressMap = {\n    'tipo ubicacion':'loc_type', 'tipo de ubicacion':'loc_type', 'ubicacion':'loc_type',\n    'id ubicacion':'ext_loc_id', 'id externo de ubicacion':'ext_loc_id',\n    'nombre ubicacion':'location_name', 'nombre de ubicacion':'location_name',\n    'calle':'addr_street',\n    'no exterior':'addr_extnum', 'num exterior':'addr_extnum', 'numero exterior':'addr_extnum',\n    'no interior':'addr_intnum', 'num interior':'addr_intnum', 'numero interior':'addr_intnum',\n    'colonia':'neighborhood',\n    'ciudad':'city',\n    'municipio':'county', 'delegacion':'county',\n    'estado':'state',\n    'cp':'zip_code', 'codigo postal':'zip_code', 'c p':'zip_code'\n  };\n  return addressMap[field] || null;\n}\n\nfunction mapEquipmentField(field) {\n  var eqMap = {\n    'no serie':'serialNumber', 'no. serie':'serialNumber', 'serie':'serialNumber',\n    'serial':'serialNumber', 'numero de serie':'serialNumber',\n    'estatus':'inv_status', 'status':'inv_status', 'base':'inv_status',\n    'tipo':'inv_type',\n    'subtipo':'inv_subtype', 'formato':'inv_subtype',\n    'marca':'inv_brand',\n    'modelo':'inv_model',\n    'id externo':'id_externo', 'id ext':'id_externo',\n    'carga':'ext_carga',\n    'nombre':'ext_nombre',\n    'comentarios':'comments', 'comentario':'comments'\n  };\n  return eqMap[field] || null;\n}\n\nfunction nullAddress() {\n  return { loc_type:null, ext_loc_id:null, location_name:null, addr_street:null,\n           addr_extnum:null, addr_intnum:null, neighborhood:null, city:null,\n           county:null, state:null, zip_code:null };\n}\n\n// ═══════════════════════════════════════════════════\n// MAIN\n// ═══════════════════════════════════════════════════\nvar classified = rawHeaders.map(function(h) { return classifyHeader(h); });\nvar results = [];\n\nfor (var ri = 0; ri < dataRows.length; ri++) {\n  var row = dataRows[ri];\n\n  var hasData = row.some(function(v) { return clean(v) !== null; });\n  if (!hasData) continue;\n\n  var simple   = {};\n  var origen   = nullAddress();\n  var destino  = nullAddress();\n  var equipos  = {};\n  var premisas = {};\n\n  for (var ci = 0; ci < classified.length; ci++) {\n    var clf = classified[ci];\n    var val = clean(row[ci]);\n    if (val === null) continue;\n\n    if (clf.type === 'simple') {\n      if (!simple[clf.field]) simple[clf.field] = val;\n    } else if (clf.type === 'origen') {\n      var addrKey = mapAddressField(clf.field);\n      if (addrKey && !origen[addrKey]) origen[addrKey] = val;\n    } else if (clf.type === 'destino') {\n      var addrKeyD = mapAddressField(clf.field);\n      if (addrKeyD && !destino[addrKeyD]) destino[addrKeyD] = val;\n    } else if (clf.type === 'equipo') {\n      var num = clf.eqNum;\n      if (!equipos[num]) equipos[num] = {};\n      var eqKey = mapEquipmentField(clf.field);\n      if (eqKey && !equipos[num][eqKey]) equipos[num][eqKey] = val;\n    } else if (clf.type === 'premisa') {\n      var pnum = clf.num;\n      if (!premisas[pnum]) premisas[pnum] = { requirement: null, comment: null };\n      if (clf.isComment) { premisas[pnum].comment = val; }\n      else               { premisas[pnum].requirement = val; }\n    }\n  }\n\n  var so_type_id = resolveServiceType(simple['SO_TYPE'] || simple['SERVICIO'] || simple['ACTIVIDAD_TEXT'] || '');\n  var esTraslado = so_type_id === 'TRASLADO' || so_type_id === 'TRANSPORTE';\n\n  var destinoFinal = nullAddress();\n  var tieneDestino = Object.values(destino).some(function(v) { return v !== null; });\n  var tieneOrigen  = Object.values(origen).some(function(v)  { return v !== null; });\n\n  if (tieneDestino) {\n    destinoFinal = destino;\n  } else {\n    var dir = simple['DIRECCION'] ? parseDireccion(simple['DIRECCION']) : { addr_street:null, addr_extnum:null, neighborhood:null, zip_code:null };\n    destinoFinal = {\n      loc_type:      simple['NIVEL']     || null,\n      ext_loc_id:    simple['ID']        || null,\n      location_name: simple['NOMBRE']    || null,\n      addr_street:   simple['CALLE']     || dir.addr_street,\n      addr_extnum:   simple['NUM_EXT']   || dir.addr_extnum,\n      addr_intnum:   simple['NUM_INT']   || null,\n      neighborhood:  simple['COLONIA']   || dir.neighborhood,\n      city:          simple['CIUDAD']    || null,\n      county:        simple['MUNICIPIO'] || simple['CIUDAD'] || null,\n      state:         simple['ESTADO']    || null,\n      zip_code:      simple['CP']        || dir.zip_code\n    };\n  }\n\n  var origenFinal = nullAddress();\n  if (esTraslado && tieneOrigen) origenFinal = origen;\n\n  var equipoNums = Object.keys(equipos).map(function(k) { return parseInt(k); }).sort();\n  var equipoArray = [];\n\n  if (equipoNums.length > 0) {\n    for (var ei = 0; ei < equipoNums.length; ei++) {\n      var eq = equipos[equipoNums[ei]];\n      equipoArray.push({\n        serialNumber: eq.serialNumber || null,\n        inv_status:   resolveStatus(eq.inv_status) || 'DISPONIBLE',\n        inv_type:     eq.inv_type    || simple['FORMATO'] || 'CAJERO',\n        inv_subtype:  eq.inv_subtype || null,\n        inv_brand:    eq.inv_brand   || simple['MARCA']   || null,\n        inv_model:    eq.inv_model   || simple['MODELO']  || null,\n        id_externo:   eq.id_externo  || null,\n        ext_carga:    eq.ext_carga   || simple['MONTA']   || null,\n        ext_nombre:   eq.ext_nombre  || null,\n        comments:     eq.comments    || null\n      });\n    }\n  } else {\n    equipoArray.push({\n      serialNumber: simple['SERIE']      || null,\n      inv_status:   resolveStatus(simple['BASE']) || 'DISPONIBLE',\n      inv_type:     simple['FORMATO']    || 'CAJERO',\n      inv_subtype:  null,\n      inv_brand:    simple['MARCA']      || null,\n      inv_model:    simple['MODELO']     || null,\n      id_externo:   simple['ID_EXTERNO'] || null,\n      ext_carga:    simple['MONTA']      || null,\n      ext_nombre:   simple['NOMBRE']     || null,\n      comments:     simple['ACTIVIDAD_TEXT'] || so_type_id\n    });\n  }\n\n  var requirementsArray = [];\n  var premisaNums = Object.keys(premisas).map(function(k) { return parseInt(k); }).sort();\n\n  if (premisaNums.length > 0) {\n    for (var pi = 0; pi < premisaNums.length; pi++) {\n      var p = premisas[premisaNums[pi]];\n      if (p.requirement) {\n        requirementsArray.push({ requirement: p.requirement, comment: p.comment || null });\n      }\n    }\n  }\n\n  if (requirementsArray.length === 0) {\n    requirementsArray.push({\n      requirement: so_type_id,\n      comment: [\n        simple['BASE']  ? 'BASE: '  + simple['BASE']  : null,\n        simple['NIVEL'] ? 'NIVEL: ' + simple['NIVEL'] : null,\n        simple['MONTA'] ? 'MONTA: ' + simple['MONTA'] : null\n      ].filter(Boolean).join('; ') || null\n    });\n  }\n\n  var validation_errors = [];\n  var fecha = simple['FECHA'] || '';\n  if (!simple['EMAIL'])      validation_errors.push('implantador.email requerido');\n  if (!cleanDate(fecha))     validation_errors.push('so_requested_date invalida: ' + fecha);\n  if (!so_type_id)           validation_errors.push('so_type_id no identificado');\n  var sinSerie = equipoArray.every(function(e) { return !e.serialNumber; });\n  if (sinSerie)              validation_errors.push('equipment: al menos un equipo requiere serialNumber');\n\n  results.push({\n    json: {\n      service_order: {\n        customer_id:       resolveCustomer(simple['ID'], simple['CLIENTE']),\n        so_type_id:        so_type_id,\n        so_service_id:     simple['SERVICIO'] || null,\n        so_customer_folio: simple['FOLIO']    || simple['ID'] || null,\n        so_requested_date: cleanDate(fecha),\n        so_requested_time: cleanTime(simple['HORA'])\n      },\n      implantador: {\n        email:           simple['EMAIL']        || null,\n        phone:           simple['TELEFONO']     || null,\n        firstname:       simple['NOMBRE_IMP']   || null,\n        midname:         simple['MIDNAME']      || null,\n        lastname:        simple['APELLIDO']     || null,\n        mother_lastname: simple['APELLIDO_MAT'] || null\n      },\n      origin:       origenFinal,\n      destination:  destinoFinal,\n      equipment:    equipoArray,\n      requirements: requirementsArray,\n      validation_errors: validation_errors,\n      _headers_detectados: classified.map(function(c) {\n        return c.type + ':' + (c.field || (c.eqNum ? 'Eq'+c.eqNum+'.'+c.field : '') || c.raw || '');\n      })\n    }\n  });\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2464,
+        9296
+      ],
+      "id": "eed5ec1c-fa1c-4c33-8847-a6ed23227b8e",
+      "name": "Parser + Build JSON"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.SAIv3_URLbase_stg }}/login",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "email",
+              "value": "ext-n8n1@imagendinamica.com"
+            },
+            {
+              "name": "password",
+              "value": "@7q7dU5(\"bH1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3040,
+        9136
+      ],
+      "id": "e65b22e1-f6c5-43df-8505-5948617bf506",
+      "name": "SAI Autenticacion7"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.SAIv3_URLbase_stg }}/serviceorders/readjsonorder",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "={\n  \"Accept\": \"application/json\",\n  \"Authorization\": \"Bearer {{ $json.access_token }}\"\n}",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify($('Limpia Output').item.json) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3216,
+        9136
+      ],
+      "id": "241ceace-ce33-49d1-986e-729d9fb62d7b",
+      "name": "Conector Validacion Json",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Eres un asistente especializado en interpretar errores de sistemas de órdenes de servicio ATM.\n\nRecibes como input el mensaje de error de una API interna (SAI) que rechazó una orden de servicio. \nEl error puede venir en {{ $json.error.message }} o en {{ $json.error }}.\n\nTu tarea es producir ÚNICAMENTE el cuerpo de un correo electrónico formal en español, \ndirigido a un cliente bancario, explicando de forma clara y concisa el motivo del rechazo.\n\nREGLAS ESTRICTAS:\n- No menciones códigos HTTP (409, 422, 500, etc.)\n- No menciones nombres técnicos del sistema (SAI, API, endpoint, JSON, payload)\n- No uses tecnicismos ni jerga de programación\n- Traduce los nombres de campos técnicos a lenguaje comprensible:\n    customer_id       → identificador del cliente\n    so_type_id        → tipo de orden de servicio\n    so_customer_folio → folio de la orden\n    so_requested_date → fecha programada\n    so_requested_time → hora programada\n    serialNumber      → número de serie del equipo\n    inv_status        → estatus del inventario\n    inv_type          → tipo de equipo\n    inv_brand         → marca del equipo\n    inv_model         → modelo del equipo\n    email             → correo electrónico del implantador\n    firstname         → nombre del implantador\n    lastname          → apellido paterno del implantador\n    mother_lastname   → apellido materno del implantador\n    loc_type          → tipo de ubicación\n    ext_loc_id        → identificador de ubicación\n    addr_street       → calle\n    neighborhood      → colonia\n    zip_code          → código postal\n\nFORMATO DE SALIDA — usa exactamente esta estructura:\n\nHemos identificado el motivo por el cual su solicitud de servicio no pudo ser procesada.\n\nMotivo del rechazo:\n[Una oración clara explicando el problema principal en lenguaje sencillo]\n\nPuntos que requieren corrección:\n— [Punto 1 en lenguaje claro]\n— [Punto 2 en lenguaje claro]\n— [Punto N en lenguaje claro]\n\nAcción requerida:\nPor favor revise los puntos indicados y reenvíe su solicitud con la información corregida. \nSi tiene dudas sobre algún campo, responda a este correo y con gusto le orientamos.",
+        "batching": {
+          "batchSize": 1,
+          "delayBetweenBatches": 2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        3472,
+        9216
+      ],
+      "id": "2b1276ed-245e-4261-a235-cace28b82304",
+      "name": "Basic LLM Chain3",
+      "executeOnce": true,
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Gmail Trigger').item.json.from.value[0].address }}",
+        "subject": "=Confirmación de Orden de Servicio",
+        "emailType": "text",
+        "message": "=Estimado/a {{ $('Gmail Trigger').item.json.from.value[0].name }}\n\nPor medio del presente mensaje le confirmamos que su solicitud de servicio ha sido \nrecibida y registrada exitosamente en nuestro sistema.\n\nA continuación le compartimos los detalles de su orden:\n\n  • Número de orden: {{ $json.service_order.so_id }}\n  • Tipo de servicio: {{ $json.service_order.so_type_id }}\n  • Fecha programada: {{ $json.service_order.so_requested_date }}\n  • Hora programada: {{ $json.service_order.so_requested_time }}\n\nLe solicitamos conservar este número de orden para cualquier seguimiento o \naclaración relacionada con este servicio.\n\nEn caso de requerir modificaciones o tener alguna duda, comuníquese con nosotros.\n\nAgradecemos su preferencia.\n\nAtentamente\nÁrea de Servicios\nImagen Dinámica",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        3456,
+        8976
+      ],
+      "id": "5cce0386-d8e7-4986-8aed-91be6674a80c",
+      "name": "Send a message3",
+      "webhookId": "b2e58ef0-a161-420a-b1d9-7c203705cf6f",
+      "executeOnce": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "DljII3dYIWU80hLD",
+          "name": "Gmail Servicios Account"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "var item = $input.item.json;\n\nfunction ns(v) {\n  return v !== null && v !== undefined ? v : \"\";\n}\n\nfunction cleanAddress(addr) {\n  addr = addr || {};\n  return {\n    loc_type:      addr.loc_type      || null,\n    ext_loc_id:    addr.ext_loc_id    || null,\n    location_name: addr.location_name || null,\n    addr_street:   addr.addr_street   || null,\n    addr_extnum:   addr.addr_extnum   || null,\n    addr_intnum:   addr.addr_intnum   || null,\n    neighborhood:  addr.neighborhood  || null,\n    city:          addr.city          || null,\n    county:        addr.county        || null,\n    zip_code:      addr.zip_code      || null\n  };\n}\n\n// Cualquier caso de error → devolver { error: \"...\" }\nif (item.error) {\n  return { error: item.error };\n}\n\nif (!item.service_order) {\n  return { error: 'Estructura de datos incompleta' };\n}\n\nif (!item.implantador || !item.equipment || !item.requirements) {\n  return { error: 'Campos requeridos ausentes en el JSON' };\n}\n\nreturn {\n  service_order: {\n    customer_id:       item.service_order.customer_id       || \"\",\n    so_type_id:        item.service_order.so_type_id        || \"\",\n    so_service_id:     item.service_order.so_service_id     || \"\",\n    so_customer_folio: item.service_order.so_customer_folio || \"\",\n    so_requested_date: item.service_order.so_requested_date || \"\",\n    so_requested_time: item.service_order.so_requested_time || \"\"\n  },\n  implantador: {\n    email:           ns(item.implantador.email),\n    firstname:       ns(item.implantador.firstname),\n    midname:         ns(item.implantador.midname),\n    lastname:        ns(item.implantador.lastname),\n    mother_lastname: ns(item.implantador.mother_lastname)\n  },\n  origin:       cleanAddress(item.origin),\n  destination:  cleanAddress(item.destination),\n  equipment:    item.equipment,\n  requirements: item.requirements\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2624,
+        9296
+      ],
+      "id": "0b1a6529-7618-4ade-b4ae-120c3b4c6d34",
+      "name": "Limpia Output"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        3472,
+        9328
+      ],
+      "id": "d3dc474c-8f06-48cb-8394-b184c048e2c8",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "zYUG89DVjYhcaX8q",
+          "name": "IDin OpenAI Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Gmail Trigger').item.json.from.value[0].address }}",
+        "subject": "Aviso — Solicitud de Servicio Rechazada — Revisión Requerida",
+        "emailType": "text",
+        "message": "=Estimado/a {{ $('Gmail Trigger').item.json.from.value[0].name }} \n\n{{ $json.text }}  \n\nAgradecemos su comprensión y quedamos a sus órdenes.  \nAtentamente\nÁrea de Servicios",
+        "options": {
+          "appendAttribution": false,
+          "replyToSenderOnly": true
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2976,
+        9888
+      ],
+      "id": "221f9c29-0e19-4dda-882e-a34819a7f274",
+      "name": "Send a message",
+      "webhookId": "6815c3ef-8c53-40d3-a752-f4e3be728e23",
+      "executeOnce": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "DljII3dYIWU80hLD",
+          "name": "Gmail Servicios Account"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Eres un asistente especializado en interpretar errores de sistemas de órdenes de servicio ATM.\n\nRecibes como input el mensaje de error de una API interna (SAI) que rechazó una orden de servicio. \nEl error puede venir en {{ $json.error.message }} o en {{ $json.error }}.\n\nTu tarea es producir ÚNICAMENTE el cuerpo de un correo electrónico formal en español, \ndirigido a un cliente bancario, explicando de forma clara y concisa el motivo del rechazo.\n\nREGLAS ESTRICTAS:\n- No menciones códigos HTTP (409, 422, 500, etc.)\n- No menciones nombres técnicos del sistema (SAI, API, endpoint, JSON, payload)\n- No uses tecnicismos ni jerga de programación\n- Traduce los nombres de campos técnicos a lenguaje comprensible:\n    customer_id       → identificador del cliente\n    so_type_id        → tipo de orden de servicio\n    so_customer_folio → folio de la orden\n    so_requested_date → fecha programada\n    so_requested_time → hora programada\n    serialNumber      → número de serie del equipo\n    inv_status        → estatus del inventario\n    inv_type          → tipo de equipo\n    inv_brand         → marca del equipo\n    inv_model         → modelo del equipo\n    email             → correo electrónico del implantador\n    firstname         → nombre del implantador\n    lastname          → apellido paterno del implantador\n    mother_lastname   → apellido materno del implantador\n    loc_type          → tipo de ubicación\n    ext_loc_id        → identificador de ubicación\n    addr_street       → calle\n    neighborhood      → colonia\n    zip_code          → código postal\n\nFORMATO DE SALIDA — usa exactamente esta estructura:\n\nHemos identificado el motivo por el cual su solicitud de servicio no pudo ser procesada.\n\nMotivo del rechazo:\n[Una oración clara explicando el problema principal en lenguaje sencillo]\n\nPuntos que requieren corrección:\n— [Punto 1 en lenguaje claro]\n— [Punto 2 en lenguaje claro]\n— [Punto N en lenguaje claro]\n\nAcción requerida:\nPor favor revise los puntos indicados y reenvíe su solicitud con la información corregida. \nSi tiene dudas sobre algún campo, responda a este correo y con gusto le orientamos.",
+        "batching": {
+          "batchSize": 1,
+          "delayBetweenBatches": 2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        2688,
+        9888
+      ],
+      "id": "05408760-6839-4a90-8301-4d482b8190f7",
+      "name": "Basic LLM Chain",
+      "executeOnce": true,
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b98f9b05-ab0a-43ed-801b-c6c4994650ec",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2784,
+        9296
+      ],
+      "id": "78cb2476-424e-4ff3-888b-8cc68de4d480",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Gmail Trigger').item.json.from.value[0].address }}",
+        "subject": "Aviso: No fue posible procesar su solicitud de servicio",
+        "emailType": "text",
+        "message": "=Estimado/a {{ $('Gmail Trigger').item.json.from.value[0].name }}\n\nHemos recibido su solicitud de servicio; sin embargo, no fue posible procesarla \ndebido a que se detectaron inconsistencias en la información proporcionada.\n\nLas causas más comunes de este error son:\n\n  • El correo no contiene una tabla de datos adjunta ni en el cuerpo del mensaje.\n  • Uno o más campos obligatorios se encuentran vacíos o con valor nulo.\n  • La fecha o la hora no tienen el formato requerido (DD/MM/AAAA y HH:MM).\n  • El archivo adjunto no corresponde a un formato válido (.xlsx o .csv).\n  • El tipo de orden no fue reconocido por el sistema.\n\nPara continuar con el registro de su solicitud, le pedimos reenviar el correo \nasegurándose de incluir la información completa en la estructura indicada. \nNingún campo obligatorio debe quedar vacío.\n\nSi requiere la plantilla de solicitud o tiene dudas sobre el formato requerido, \nresponda a este correo y con gusto le proporcionamos el apoyo necesario.\n\nLamentamos los inconvenientes ocasionados y quedamos a sus órdenes.\n\nAtentamente\nÁrea de Servicios\nImagen Dinámica",
+        "options": {
+          "appendAttribution": false,
+          "replyToSenderOnly": true
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        3040,
+        9456
+      ],
+      "id": "f7a0fb7f-53b5-4cad-9914-9cf17fc98c77",
+      "name": "Send a message10",
+      "webhookId": "6815c3ef-8c53-40d3-a752-f4e3be728e23",
+      "executeOnce": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "DljII3dYIWU80hLD",
+          "name": "Gmail Servicios Account"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "dd286f09-ef1d-410c-8a14-86921ba9f758",
+              "leftValue": "={{ $json.message }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1888,
+        9616
+      ],
+      "id": "6865c162-1557-4a62-9d93-d2a128089554",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Gmail Trigger').item.json.from.value[0].address }}",
+        "subject": "=Confirmación de Orden de Servicio",
+        "emailType": "text",
+        "message": "=Estimado/a {{ $('Gmail Trigger').item.json.from.value[0].name }}\n\nPor medio del presente mensaje le confirmamos que su solicitud de servicio ha sido \nrecibida y registrada exitosamente en nuestro sistema.\n\nA continuación le compartimos los detalles de su orden:\n\n  • Número de orden: {{ $json.service_order.so_id }}\n  • Tipo de servicio: {{ $json.service_order.so_type_id }}\n  • Fecha programada: {{ $json.service_order.so_requested_date }}\n  • Hora programada: {{ $json.service_order.so_requested_time }}\n\nLe solicitamos conservar este número de orden para cualquier seguimiento o \naclaración relacionada con este servicio.\n\nEn caso de requerir modificaciones o tener alguna duda, comuníquese con nosotros.\n\nAgradecemos su preferencia.\n\nAtentamente\nÁrea de Servicios\nImagen Dinámica",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2720,
+        9680
+      ],
+      "id": "4451495e-5905-433f-871a-7c4d0f5ee801",
+      "name": "Send a message4",
+      "webhookId": "b2e58ef0-a161-420a-b1d9-7c203705cf6f",
+      "executeOnce": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "DljII3dYIWU80hLD",
+          "name": "Gmail Servicios Account"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Gmail Trigger').item.json.from.value[0].address }}",
+        "subject": "Aviso — Solicitud de Servicio Rechazada — Revisión Requerida",
+        "emailType": "text",
+        "message": "=Estimado/a {{ $('Gmail Trigger').item.json.from.value[0].name }} \n\n{{ $json.text }}  \n\nAgradecemos su comprensión y quedamos a sus órdenes.  \nAtentamente\nÁrea de Servicios ",
+        "options": {
+          "appendAttribution": false,
+          "replyToSenderOnly": true
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        3760,
+        9216
+      ],
+      "id": "c1a4f5e8-1e3a-4316-bb43-2d4e4d2a7767",
+      "name": "Send a message1",
+      "webhookId": "6815c3ef-8c53-40d3-a752-f4e3be728e23",
+      "executeOnce": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "DljII3dYIWU80hLD",
+          "name": "Gmail Servicios Account"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "content": "## Plantilla Xlsx - csv",
+        "height": 624,
+        "width": 1104
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2048,
+        9680
+      ],
+      "typeVersion": 1,
+      "id": "fac18205-c192-48bb-830f-b94a93900309",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Contenido Body del Correo",
+        "height": 704,
+        "width": 1904,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2048,
+        8960
+      ],
+      "typeVersion": 1,
+      "id": "e52d376b-6c04-464c-9ee8-761f2d55a4e7",
+      "name": "Sticky Note2"
+    }
+  ],
+  "pinData": {
+    "Gmail Trigger": [
+      {
+        "json": {
+          "id": "19d9cedc0a070bb0",
+          "threadId": "19d9cedc0a070bb0",
+          "labelIds": [
+            "CATEGORY_PERSONAL",
+            "INBOX"
+          ],
+          "sizeEstimate": 6975,
+          "headers": {
+            "delivered-to": "Delivered-To: servicios@imagendinamica.com",
+            "received": "Received: from mail-sor-f41.google.com (mail-sor-f41.google.com. [209.85.220.41])\r\n        by mx.google.com with SMTPS id 2adb3069b0e04-5a4187fae4fsor342547e87.15.2026.04.17.12.32.00\r\n        for <servicios@imagendinamica.com>\r\n        (Google Transport Security);\r\n        Fri, 17 Apr 2026 12:32:00 -0700 (PDT)",
+            "x-received": "X-Received: by 2002:a05:6512:1109:b0:5a3:fd71:2781 with SMTP id\r\n 2adb3069b0e04-5a4172e7c37mr1245950e87.34.1776454319360; Fri, 17 Apr 2026\r\n 12:31:59 -0700 (PDT)",
+            "arc-seal": "ARC-Seal: i=1; a=rsa-sha256; t=1776454319; cv=none;\r\n        d=google.com; s=arc-20240605;\r\n        b=crfUI9/LW1OjQL4Tt4QjMXlGv4EBV6BAlM832sBAQ7XUfABbnc0Q574EUILSHHF4Hc\r\n         8c7l/jHdqx/sG4F+5aPNzQFDlUUZk5TlS/KhSKBKCGTwS5fxHLgubF3JC+n796xZ6ciX\r\n         1wJVU7AgOJRtdZAznxzSGmS3I9BqNowFV6cyDxP5oe16fPUa7iwOKAs8wBOhjKyIqR53\r\n         OeF0a+xB0d7W19PQNbSGDbtOXEQEBWosPWaIacQE438ZFJVj3sxvy1MqHbe1pUB8YKO4\r\n         yR/EhJiAMHEQ58BY7yCTQyfU+dpZJWCAN2k0mpsVdSIREDxLZfvmRIDGQEwDjI1fwnka\r\n         02hg==",
+            "arc-message-signature": "ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;\r\n        h=to:subject:message-id:date:from:mime-version:dkim-signature;\r\n        bh=peT0tSCEWTLqpHda9DUOlp6zmpqO2Gx0SyR3Z8RaU6E=;\r\n        fh=ANTk1qVpaseVh1r/yLmAkP10B63STJ6VSPD0qE5GwHE=;\r\n        b=lZpmBlx0qsRDCN6yt8Y+cu2xQphiz5A6Cyd67z+6hk0uMjEwMBVtCpP5pV5/hk2bsn\r\n         F+NEXtx9SfkS88y28+TnwcnI9VHnLEywKEB5DwbVod48ZqeLDrdRDcmd+XIWeT+K/yRT\r\n         U8/nw3x+11UCvTEHyX24axXDyhWmpwRxrv0M4LWeiIJGx1q38bwGfGo4kYU40Qw6vg+Y\r\n         6y7nrJo5DzshS3qxgKQduy7PemSSL9eWT36+AInY87oSMJ3x/vGvYLM6e1uyNN3Kixrh\r\n         49olXJF5LcEED+LCfjfeqmozyh8jJmmeDnjsbIaZu92PX/aQFJOgQfIkjk0bQqBQjMKp\r\n         vPNA==;\r\n        darn=imagendinamica.com",
+            "arc-authentication-results": "ARC-Authentication-Results: i=1; mx.google.com; arc=none",
+            "return-path": "Return-Path: <rodezayas@gmail.com>",
+            "received-spf": "Received-SPF: pass (google.com: domain of rodezayas@gmail.com designates 209.85.220.41 as permitted sender) client-ip=209.85.220.41;",
+            "authentication-results": "Authentication-Results: mx.google.com;\r\n       dkim=pass header.i=@gmail.com header.s=20251104 header.b=LJLm01UC;\r\n       arc=pass (i=1);\r\n       spf=pass (google.com: domain of rodezayas@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=rodezayas@gmail.com;\r\n       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com;\r\n       dara=neutral header.i=@imagendinamica.com",
+            "dkim-signature": "DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;\r\n        d=gmail.com; s=20251104; t=1776454319; x=1777059119; darn=imagendinamica.com;\r\n        h=to:subject:message-id:date:from:mime-version:from:to:cc:subject\r\n         :date:message-id:reply-to;\r\n        bh=peT0tSCEWTLqpHda9DUOlp6zmpqO2Gx0SyR3Z8RaU6E=;\r\n        b=LJLm01UCzK5CCUn3+IdwprbEVUa8ctYWUXkNr6z9OtcCsCFRuyxxABZABTKZqoV+6B\r\n         QsnfMzj9ukNHlYpCDMegexTcAzSW7Ux96pnl2lwo14RBJEOnYKdScwdg/HtAUEI8PZhr\r\n         3nw3d5tz2Tj1Bbwbk9XHqa/aIiuLt8dBCkpAl647hDQUcWxeutTDZHNVh1fvKu/yvDWZ\r\n         lOn1OScFI32HTMoI9RbgI1SLB4WvTxrfthnBvt7+ivizCA5d8IxWkvaOULnPjNDHH2Pn\r\n         8H/Ozj1QOFyRa1xcoBUgtS20wu7rrh8CmLg6bD3k1SdYFg7cfukOj0aLq/A9ANzy3oQ+\r\n         Ghsw==",
+            "x-google-dkim-signature": "X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;\r\n        d=1e100.net; s=20251104; t=1776454319; x=1777059119;\r\n        h=to:subject:message-id:date:from:mime-version:x-gm-gg\r\n         :x-gm-message-state:from:to:cc:subject:date:message-id:reply-to;\r\n        bh=peT0tSCEWTLqpHda9DUOlp6zmpqO2Gx0SyR3Z8RaU6E=;\r\n        b=Lwrdh9hUmjjcpHNJBpJ87XMOvj2xne7EqSdO2EcKeow/uXTx8W0ClWfkI3y1rqI2Fl\r\n         w9SHcLj/+kJGFXDmPe8culsSRHce1j4ViCrbPG088NqbDq9c4JPccmnVRSfzIdfPEQXu\r\n         Jgp1pHfSCUjK6zA0+Ui8oKkoCO13BWW/4Gdgy4ESsc7MsYUctmSw7pgsOoAIHi+R1A/Y\r\n         OG05u5o2SH2kLeBubRuEcLaAm1dp0KJss/R5CgtC0BolSxmBsC6AEaWDldQdjCJVyFZn\r\n         a1bfsz7vdLLPrq8kbhOWjqmwXrSEzhBccomoS9+DMzfluR15dOq7QYfCTU4f7qKKNlen\r\n         rRSQ==",
+            "x-gm-message-state": "X-Gm-Message-State: AOJu0YzRXDZmkwmsVJbS0XPq5Br6LjJQweYVXRBpEdaVqhGrxYL+QWM/\r\n\tgWqf0PMfQo+p3SZoTAPbhmBIcLXSPooTjNHGcaZLL3RFE8nwT5mj22WSwz/+TMHey41xuMj2iLC\r\n\tAbOFYG4rqzPbU0Z6vRGBmLGYMVYKYpy3zDNvT",
+            "x-gm-gg": "X-Gm-Gg: AeBDiesAcCegGkjtkpRLdKhc10dCWnKgOdMaULRAxlpTLcfs22Z+OZMp/nAQy9Gpctp\r\n\tGBUKpvois3lIdb/g73szH/AYj35ZoggGMIZGoxtnV4KVYU6XpACF9HOKLuftGjt+rOvsFDh6FTE\r\n\tWmMfUYcFCUajFvKNTzmkI6HKtsZtmgetq4x8L2LLm3aJJsxZDm2idk3MKRCtg18GFtbuoID6bNU\r\n\tfHbyct3yUB23fE9poQGsgORMj2F94GggU3vbq3Ghzaqq4fh7L06vAuLl6ca4cKLrp6SNrWajezb\r\n\tQH051SGLTDXYqbUO8klo65+b2swlPNhnYLYchKaKF0gkPBtCs329UHoNmhNJUi6GvvR7d33fmqK\r\n\tTIA8R",
+            "mime-version": "MIME-Version: 1.0",
+            "from": "From: Rodrigo Zayas <rodezayas@gmail.com>",
+            "date": "Date: Fri, 17 Apr 2026 13:31:48 -0600",
+            "x-gm-features": "X-Gm-Features: AQROBzA9caaHlhFYgbf3iPmH5fsp1ulie1WzMTB8Bhwchsr1uQh-DP_j65V52JY",
+            "message-id": "Message-ID: <CAG1t3pHu7zt7d4P=RnUeEcYa=QDvMSYvJ+95ACp9LfxMXxxOrw@mail.gmail.com>",
+            "subject": "Subject: solicitud",
+            "to": "To: servicios@imagendinamica.com",
+            "content-type": "Content-Type: multipart/alternative; boundary=\"000000000000aa4fca064fad009f\""
+          },
+          "html": "<div dir=\"ltr\">.</div>\n",
+          "text": ".\n",
+          "textAsHtml": "<p>.</p>",
+          "subject": "solicitud",
+          "date": "2026-04-17T19:31:48.000Z",
+          "to": {
+            "value": [
+              {
+                "address": "servicios@imagendinamica.com",
+                "name": ""
+              }
+            ],
+            "html": "<span class=\"mp_address_group\"><a href=\"mailto:servicios@imagendinamica.com\" class=\"mp_address_email\">servicios@imagendinamica.com</a></span>",
+            "text": "servicios@imagendinamica.com"
+          },
+          "from": {
+            "value": [
+              {
+                "address": "rodezayas@gmail.com",
+                "name": "Rodrigo Zayas"
+              }
+            ],
+            "html": "<span class=\"mp_address_group\"><span class=\"mp_address_name\">Rodrigo Zayas</span> &lt;<a href=\"mailto:rodezayas@gmail.com\" class=\"mp_address_email\">rodezayas@gmail.com</a>&gt;</span>",
+            "text": "\"Rodrigo Zayas\" <rodezayas@gmail.com>"
+          },
+          "messageId": "<CAG1t3pHu7zt7d4P=RnUeEcYa=QDvMSYvJ+95ACp9LfxMXxxOrw@mail.gmail.com>"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extractor xlsx",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extractor de Tablas": {
+      "main": [
+        [
+          {
+            "node": "Estandarizador de Columnas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "xlsx": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extractor xlsx": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conector xlsx": {
+      "main": [
+        [
+          {
+            "node": "Send a message4",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Estandarizador de Columnas": {
+      "main": [
+        [
+          {
+            "node": "Parser + Build JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Conector xlsx",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SAI Autenticacion": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parser + Build JSON": {
+      "main": [
+        [
+          {
+            "node": "Limpia Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SAI Autenticacion7": {
+      "main": [
+        [
+          {
+            "node": "Conector Validacion Json",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain3": {
+      "main": [
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conector Validacion Json": {
+      "main": [
+        [
+          {
+            "node": "Send a message3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Basic LLM Chain3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limpia Output": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain3",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "SAI Autenticacion7",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a message10",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Extractor de Tablas",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SAI Autenticacion",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "xlsx",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "dccf0257-1e77-432c-9d8a-369c05b89fbb",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e850d7b80c80a746054be2110b899058f627e4065fc04f586c728acdc177230e"
+  },
+  "id": "6N83GNOHRqnJIhSg",
+  "tags": []
+}

@@ -1,0 +1,357 @@
+{
+  "name": "Ficha Técnica Inmobiliaria — Sistemake AI",
+  "nodes": [
+    {
+      "id": "node-tg-trigger",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 300],
+      "parameters": {
+        "updates": ["message"],
+        "additionalFields": {}
+      },
+      "credentials": {
+        "telegramApi": { "id": "TELEGRAM_CRED_ID", "name": "Telegram Bot" }
+      }
+    },
+    {
+      "id": "node-router",
+      "name": "Tipo de mensaje",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [220, 300],
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "conditions": [{ "leftValue": "={{ $json.message.text }}", "rightValue": "/generar", "operator": { "type": "string", "operation": "startsWith" } }],
+                "combinator": "and"
+              },
+              "outputKey": "generar"
+            },
+            {
+              "conditions": {
+                "conditions": [{ "leftValue": "={{ $json.message.photo !== undefined }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+                "combinator": "and"
+              },
+              "outputKey": "foto"
+            },
+            {
+              "conditions": {
+                "conditions": [{ "leftValue": "={{ $json.message.text !== undefined && !$json.message.text.startsWith('/') }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+                "combinator": "and"
+              },
+              "outputKey": "texto"
+            }
+          ]
+        },
+        "fallbackOutput": "extra"
+      }
+    },
+    {
+      "id": "node-start-msg",
+      "name": "Mensaje bienvenida",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [440, 500],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "🏠 *Bot de Fichas Técnicas Inmobiliarias*\n\nPara generar una ficha técnica:\n\n1️⃣ Envía las *fotos* de la propiedad (una o varias)\n2️⃣ Envía un mensaje con la *información* de la propiedad\n3️⃣ Escribe */generar* para crear el PDF\n\n_Ejemplo de información:_\n```\nCalle Hidalgo 42, Col. Centro, Querétaro\n3 recámaras, 2 baños\n120 m² construidos, 180 m² terreno\n$3,500,000 MXN\nGarage 2 autos, jardín, cisterna\nCercano a escuelas y hospital\n```",
+        "additionalFields": { "parse_mode": "Markdown" }
+      },
+      "credentials": {
+        "telegramApi": { "id": "TELEGRAM_CRED_ID", "name": "Telegram Bot" }
+      }
+    },
+    {
+      "id": "node-get-photo",
+      "name": "Obtener archivo foto",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [440, 200],
+      "parameters": {
+        "operation": "getFile",
+        "fileId": "={{ $json.message.photo.slice(-1)[0].file_id }}",
+        "additionalFields": {}
+      },
+      "credentials": {
+        "telegramApi": { "id": "TELEGRAM_CRED_ID", "name": "Telegram Bot" }
+      }
+    },
+    {
+      "id": "node-store-photo",
+      "name": "Guardar foto en sesión",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 200],
+      "parameters": {
+        "jsCode": "const chatId  = $('Telegram Trigger').first().json.message.chat.id.toString();\nconst filePath = $input.first().json.file_path;\nconst botToken = 'TU_BOT_TOKEN'; // reemplaza con tu token\nconst photoUrl = `https://api.telegram.org/file/bot${botToken}/${filePath}`;\n\n// Use workflow static data for session storage per chat\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.sessions) staticData.sessions = {};\nif (!staticData.sessions[chatId]) staticData.sessions[chatId] = { photos: [], texto: '' };\n\nstaticData.sessions[chatId].photos.push(photoUrl);\nconst count = staticData.sessions[chatId].photos.length;\n\nreturn [{ json: { chatId, photoUrl, count } }];"
+      }
+    },
+    {
+      "id": "node-confirm-photo",
+      "name": "Confirmar foto recibida",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [880, 200],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chatId }}",
+        "text": "=📷 Foto {{ $json.count }} guardada. Sigue enviando fotos o escribe la información de la propiedad.",
+        "additionalFields": {}
+      },
+      "credentials": {
+        "telegramApi": { "id": "TELEGRAM_CRED_ID", "name": "Telegram Bot" }
+      }
+    },
+    {
+      "id": "node-store-texto",
+      "name": "Guardar texto en sesión",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 380],
+      "parameters": {
+        "jsCode": "const chatId = $('Telegram Trigger').first().json.message.chat.id.toString();\nconst texto  = $('Telegram Trigger').first().json.message.text || '';\n\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.sessions) staticData.sessions = {};\nif (!staticData.sessions[chatId]) staticData.sessions[chatId] = { photos: [], texto: '' };\n\nstaticData.sessions[chatId].texto += (staticData.sessions[chatId].texto ? '\\n' : '') + texto;\n\nreturn [{ json: { chatId, texto, totalTexto: staticData.sessions[chatId].texto } }];"
+      }
+    },
+    {
+      "id": "node-confirm-texto",
+      "name": "Confirmar texto recibido",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [660, 380],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chatId }}",
+        "text": "✅ Información guardada. Cuando hayas enviado todas las fotos escribe */generar* para crear la ficha PDF.",
+        "additionalFields": { "parse_mode": "Markdown" }
+      },
+      "credentials": {
+        "telegramApi": { "id": "TELEGRAM_CRED_ID", "name": "Telegram Bot" }
+      }
+    },
+    {
+      "id": "node-load-session",
+      "name": "Cargar sesión",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 60],
+      "parameters": {
+        "jsCode": "const chatId = $('Telegram Trigger').first().json.message.chat.id.toString();\nconst staticData = $getWorkflowStaticData('global');\nconst session = staticData.sessions?.[chatId] || { photos: [], texto: '' };\n\nif (!session.texto && session.photos.length === 0) {\n  return [{ json: { chatId, error: 'empty', photos: [], texto: '' } }];\n}\n\nreturn [{ json: { chatId, photos: session.photos, texto: session.texto, photoCount: session.photos.length } }];"
+      }
+    },
+    {
+      "id": "node-check-session",
+      "name": "¿Hay datos suficientes?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [660, 60],
+      "parameters": {
+        "conditions": {
+          "conditions": [{ "leftValue": "={{ $json.error }}", "rightValue": "empty", "operator": { "type": "string", "operation": "notEquals" } }],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "node-msg-empty",
+      "name": "Aviso sin datos",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [880, 180],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "⚠️ No tengo fotos ni información guardada. Primero envíame las fotos y el texto de la propiedad, luego escribe /generar.",
+        "additionalFields": {}
+      },
+      "credentials": {
+        "telegramApi": { "id": "TELEGRAM_CRED_ID", "name": "Telegram Bot" }
+      }
+    },
+    {
+      "id": "node-typing",
+      "name": "Enviando... (typing)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [880, 60],
+      "parameters": {
+        "operation": "sendChatAction",
+        "chatId": "={{ $json.chatId }}",
+        "action": "upload_document"
+      },
+      "credentials": {
+        "telegramApi": { "id": "TELEGRAM_CRED_ID", "name": "Telegram Bot" }
+      }
+    },
+    {
+      "id": "node-ai-structure",
+      "name": "AI — Estructurar datos",
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
+      "position": [1100, 60],
+      "parameters": {
+        "resource": "text",
+        "modelId": {
+          "__rl": true,
+          "value": "claude-opus-4-6",
+          "mode": "list",
+          "cachedResultName": "claude-opus-4-6"
+        },
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Eres un asistente experto en bienes raíces mexicanos. Analiza el texto de una propiedad y devuelve ÚNICAMENTE un JSON válido con los datos estructurados. Sin markdown, sin texto extra. Si un campo no está disponible usa null."
+            },
+            {
+              "role": "user",
+              "content": "=Analiza esta información de propiedad inmobiliaria y extrae todos los datos estructurados:\n\nTEXTO:\n{{ $('Cargar sesión').item.json.texto }}\n\nDevuelve exactamente este JSON:\n{\n  \"titulo\": \"Título atractivo de la propiedad (ej: Hermosa Casa en Col. Centro)\",\n  \"tipo_propiedad\": \"Casa|Departamento|Terreno|Local|Oficina|Bodega\",\n  \"operacion\": \"Venta|Renta|Venta o Renta\",\n  \"precio\": \"precio formateado con moneda (ej: $3,500,000 MXN)\",\n  \"precio_m2\": \"precio por m2 si se puede calcular, sino null\",\n  \"direccion\": \"dirección completa\",\n  \"colonia\": \"colonia o fraccionamiento\",\n  \"ciudad\": \"ciudad\",\n  \"estado\": \"estado\",\n  \"m2_construidos\": \"número + m²\",\n  \"m2_terreno\": \"número + m²\",\n  \"recamaras\": null,\n  \"banos_completos\": null,\n  \"medios_banos\": null,\n  \"niveles\": null,\n  \"estacionamientos\": null,\n  \"antiguedad\": null,\n  \"caracteristicas\": [],\n  \"descripcion_larga\": \"\",\n  \"descripcion_ubicacion\": \"\",\n  \"mantenimiento\": null,\n  \"amueblado\": null,\n  \"mascotas\": null\n}"
+            }
+          ]
+        },
+        "options": { "temperature": 0.1, "maxTokens": 1500 }
+      },
+      "credentials": {
+        "anthropicApi": { "id": "L6uWpsm4R1xYB6f9", "name": "Anthropic account" }
+      }
+    },
+    {
+      "id": "node-parse-ai",
+      "name": "Parsear datos + preparar HTML",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 60],
+      "parameters": {
+        "jsCode": "const aiRaw   = $input.first().json.content[0].text || '';\nconst session = $('Cargar sesión').first().json;\n\n// Parse AI JSON\nlet prop = {};\ntry {\n  const clean = aiRaw.replace(/```json|```/g, '').trim();\n  prop = JSON.parse(clean);\n} catch(e) {\n  prop = {\n    titulo: 'Propiedad en Venta',\n    tipo_propiedad: 'Propiedad',\n    operacion: 'Venta',\n    precio: 'Consultar',\n    descripcion_larga: session.texto,\n    caracteristicas: []\n  };\n}\n\n// Build photo HTML (max 6 photos in grid)\nconst photos = (session.photos || []).slice(0, 6);\nconst photoHTML = photos.length > 0\n  ? photos.map((url, i) =>\n      `<img src=\"${url}\" style=\"width:100%;height:180px;object-fit:cover;border-radius:6px;\" />`\n    ).join('')\n  : '<div style=\"width:100%;height:180px;background:#e8e8e8;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#999;\">Sin fotos</div>';\n\n// Build characteristics HTML\nconst chars = (prop.caracteristicas || []);\nconst charHTML = chars.length > 0\n  ? chars.map(c => `<li style=\"margin-bottom:4px;\">${c}</li>`).join('')\n  : '';\n\n// Build specs grid\nconst specs = [\n  ['Tipo', prop.tipo_propiedad],\n  ['Operación', prop.operacion],\n  ['m² Construidos', prop.m2_construidos],\n  ['m² Terreno', prop.m2_terreno],\n  ['Recámaras', prop.recamaras],\n  ['Baños Completos', prop.banos_completos],\n  ['Medios Baños', prop.medios_banos],\n  ['Niveles', prop.niveles],\n  ['Estacionamientos', prop.estacionamientos],\n  ['Antigüedad', prop.antiguedad],\n  ['Mantenimiento', prop.mantenimiento],\n  ['Amueblado', prop.amueblado === true ? 'Sí' : prop.amueblado === false ? 'No' : null],\n  ['Mascotas', prop.mascotas === true ? 'Permitidas' : prop.mascotas === false ? 'No permitidas' : null],\n].filter(([_, v]) => v !== null && v !== undefined && v !== '');\n\nconst specsHTML = specs.map(([k, v]) =>\n  `<tr><td style=\"padding:6px 10px;font-weight:600;color:#555;background:#f8f8f8;border:1px solid #e0e0e0;font-size:12px;\">${k}</td>\n       <td style=\"padding:6px 10px;color:#222;border:1px solid #e0e0e0;font-size:12px;\">${v}</td></tr>`\n).join('');\n\nconst today = new Date().toLocaleDateString('es-MX', { year:'numeric', month:'long', day:'numeric' });\n\n// Determine grid columns for photos\nconst gridCols = photos.length === 1 ? '1fr' : photos.length === 2 ? '1fr 1fr' : photos.length >= 3 ? '1fr 1fr 1fr' : '1fr';\n\nconst html = `<!DOCTYPE html>\n<html lang=\"es\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n<title>Ficha Técnica — ${prop.titulo || 'Propiedad'}</title>\n<style>\n  * { margin:0; padding:0; box-sizing:border-box; }\n  body { font-family: 'Arial', sans-serif; background:#fff; color:#222; }\n  .page { width:794px; min-height:1123px; padding:0; }\n  \n  /* HEADER */\n  .header { background:#1a3a5c; color:#fff; padding:24px 32px; display:flex; justify-content:space-between; align-items:center; }\n  .header-logo { font-size:22px; font-weight:700; letter-spacing:1px; }\n  .header-logo span { color:#d4af37; }\n  .header-tag { background:#d4af37; color:#1a3a5c; padding:6px 16px; border-radius:20px; font-weight:700; font-size:13px; }\n  \n  /* HERO PRICE */\n  .hero { background:#f0f4f8; padding:20px 32px; border-bottom:3px solid #d4af37; }\n  .prop-title { font-size:22px; font-weight:700; color:#1a3a5c; margin-bottom:4px; }\n  .prop-address { font-size:13px; color:#666; margin-bottom:12px; }\n  .price-tag { font-size:28px; font-weight:700; color:#1a3a5c; }\n  .price-m2 { font-size:13px; color:#888; margin-top:2px; }\n  \n  /* PHOTOS */\n  .photos-section { padding:20px 32px 12px; }\n  .photos-grid { display:grid; grid-template-columns:${gridCols}; gap:8px; }\n  .section-title { font-size:14px; font-weight:700; color:#1a3a5c; text-transform:uppercase; letter-spacing:1px; border-left:3px solid #d4af37; padding-left:10px; margin-bottom:12px; }\n  \n  /* TWO COLUMNS */\n  .two-col { display:grid; grid-template-columns:1fr 1fr; gap:20px; padding:16px 32px; }\n  .col-section { }\n  \n  /* SPECS TABLE */\n  table { width:100%; border-collapse:collapse; }\n  \n  /* DESCRIPTION */\n  .desc-section { padding:0 32px 16px; }\n  .desc-text { font-size:13px; line-height:1.7; color:#444; }\n  \n  /* CARACTERÍSTICAS */\n  ul { padding-left:18px; }\n  li { font-size:12px; color:#444; }\n  \n  /* FOOTER */\n  .footer { background:#1a3a5c; color:#aab8c8; padding:16px 32px; font-size:11px; display:flex; justify-content:space-between; align-items:center; margin-top:auto; }\n  .footer-brand { color:#d4af37; font-weight:700; font-size:13px; }\n  .qr-placeholder { width:60px; height:60px; background:#fff; border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:9px; color:#999; text-align:center; }\n  \n  /* BADGE */\n  .badge { display:inline-block; background:#d4af37; color:#1a3a5c; padding:3px 10px; border-radius:12px; font-size:11px; font-weight:700; margin-bottom:8px; }\n  \n  /* DIVIDER */\n  .divider { height:1px; background:#e8e8e8; margin:0 32px; }\n</style>\n</head>\n<body>\n<div class=\"page\">\n\n  <!-- HEADER -->\n  <div class=\"header\">\n    <div>\n      <div class=\"header-logo\">REALTY<span>PRO</span></div>\n      <div style=\"font-size:11px;color:#aab8c8;margin-top:2px;\">Asesoría Inmobiliaria Profesional</div>\n    </div>\n    <div class=\"header-tag\">${(prop.operacion || 'EN VENTA').toUpperCase()}</div>\n  </div>\n\n  <!-- HERO -->\n  <div class=\"hero\">\n    <div class=\"badge\">${prop.tipo_propiedad || 'Propiedad'}</div>\n    <div class=\"prop-title\">${prop.titulo || 'Propiedad en Venta'}</div>\n    <div class=\"prop-address\">📍 ${[prop.colonia, prop.ciudad, prop.estado].filter(Boolean).join(', ') || prop.direccion || ''}</div>\n    <div class=\"price-tag\">${prop.precio || 'Precio a consultar'}</div>\n    ${prop.precio_m2 ? `<div class=\"price-m2\">${prop.precio_m2} por m²</div>` : ''}\n  </div>\n\n  <!-- PHOTOS -->\n  <div class=\"photos-section\">\n    <div class=\"section-title\">Fotografías</div>\n    <div class=\"photos-grid\">\n      ${photoHTML}\n    </div>\n  </div>\n\n  <div class=\"divider\"></div>\n\n  <!-- TWO COLUMN: SPECS + CARACTERÍSTICAS -->\n  <div class=\"two-col\">\n    <div class=\"col-section\">\n      <div class=\"section-title\" style=\"margin-bottom:10px;\">Ficha técnica</div>\n      <table>${specsHTML}</table>\n    </div>\n    <div class=\"col-section\">\n      ${charHTML ? `\n      <div class=\"section-title\" style=\"margin-bottom:10px;\">Características</div>\n      <ul>${charHTML}</ul>\n      ` : ''}\n      ${prop.descripcion_ubicacion ? `\n      <div class=\"section-title\" style=\"margin-top:16px;margin-bottom:10px;\">Zona y ubicación</div>\n      <p style=\"font-size:12px;color:#444;line-height:1.6;\">${prop.descripcion_ubicacion}</p>\n      ` : ''}\n    </div>\n  </div>\n\n  <div class=\"divider\"></div>\n\n  <!-- DESCRIPTION -->\n  ${prop.descripcion_larga ? `\n  <div class=\"desc-section\" style=\"padding-top:16px;\">\n    <div class=\"section-title\">Descripción</div>\n    <p class=\"desc-text\">${prop.descripcion_larga}</p>\n  </div>\n  ` : ''}\n\n  <!-- ADDRESS FULL -->\n  ${prop.direccion ? `\n  <div style=\"padding:8px 32px 16px;\">\n    <div class=\"section-title\">Dirección</div>\n    <p style=\"font-size:13px;color:#444;\">${prop.direccion}</p>\n  </div>\n  ` : ''}\n\n  <!-- FOOTER -->\n  <div class=\"footer\">\n    <div>\n      <div class=\"footer-brand\">RealtyPRO Asesores</div>\n      <div style=\"margin-top:4px;\">Tel: +52 442 000 0000 · info@realtypro.mx</div>\n      <div style=\"margin-top:2px;\">Ficha generada el ${today} · Precio sujeto a cambio sin previo aviso</div>\n    </div>\n    <div class=\"qr-placeholder\">Escanea<br/>para info</div>\n  </div>\n\n</div>\n</body>\n</html>`;\n\nconst buffer = Buffer.from(html, 'utf8');\nconst binaryHtml = await this.helpers.prepareBinaryData(buffer, 'index.html', 'text/html');\n\nreturn [{ json: { html, chatId: session.chatId, prop, photoCount: photos.length }, binary: { htmlFile: binaryHtml } }];"
+      }
+    },
+    {
+      "id": "node-html-to-pdf",
+      "name": "HTML → PDF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1540, 60],
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3000/forms/chromium/convert/html",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "files",
+              "inputDataFieldName": "htmlFile"
+            }
+          ]
+        },
+        "options": {
+          "response": { "response": { "responseFormat": "file", "outputPropertyName": "data" } }
+        }
+      }
+    },
+    {
+      "id": "node-send-pdf",
+      "name": "Enviar PDF por Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1760, 60],
+      "parameters": {
+        "operation": "sendDocument",
+        "chatId": "={{ $('Parsear datos + preparar HTML').item.json.chatId }}",
+        "binaryData": true,
+        "binaryPropertyName": "data",
+        "additionalFields": {
+          "caption": "=🏠 *{{ $('Parsear datos + preparar HTML').item.json.prop.titulo }}*\n\n💰 {{ $('Parsear datos + preparar HTML').item.json.prop.precio }}\n📍 {{ $('Parsear datos + preparar HTML').item.json.prop.ciudad }}\n📷 {{ $('Parsear datos + preparar HTML').item.json.photoCount }} foto(s) incluida(s)\n\n_Ficha generada por Sistemake AI_",
+          "parse_mode": "Markdown"
+        }
+      },
+      "credentials": {
+        "telegramApi": { "id": "TELEGRAM_CRED_ID", "name": "Telegram Bot" }
+      }
+    },
+    {
+      "id": "node-clear-session",
+      "name": "Limpiar sesión",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1980, 60],
+      "parameters": {
+        "jsCode": "const chatId = $('Parsear datos + preparar HTML').first().json.chatId;\nconst staticData = $getWorkflowStaticData('global');\nif (staticData.sessions) delete staticData.sessions[chatId];\nreturn [{ json: { ok: true, chatId } }];"
+      }
+    },
+    {
+      "id": "node-done-msg",
+      "name": "Mensaje final",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [2200, 60],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chatId }}",
+        "text": "✅ Sesión limpiada. Puedes enviar una nueva propiedad cuando quieras.",
+        "additionalFields": {}
+      },
+      "credentials": {
+        "telegramApi": { "id": "TELEGRAM_CRED_ID", "name": "Telegram Bot" }
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [[{ "node": "Tipo de mensaje", "type": "main", "index": 0 }]]
+    },
+    "Tipo de mensaje": {
+      "main": [
+        [{ "node": "Cargar sesión", "type": "main", "index": 0 }],
+        [{ "node": "Obtener archivo foto", "type": "main", "index": 0 }],
+        [{ "node": "Guardar texto en sesión", "type": "main", "index": 0 }],
+        [{ "node": "Mensaje bienvenida", "type": "main", "index": 0 }]
+      ]
+    },
+    "Obtener archivo foto": {
+      "main": [[{ "node": "Guardar foto en sesión", "type": "main", "index": 0 }]]
+    },
+    "Guardar foto en sesión": {
+      "main": [[{ "node": "Confirmar foto recibida", "type": "main", "index": 0 }]]
+    },
+    "Guardar texto en sesión": {
+      "main": [[{ "node": "Confirmar texto recibido", "type": "main", "index": 0 }]]
+    },
+    "Cargar sesión": {
+      "main": [[{ "node": "¿Hay datos suficientes?", "type": "main", "index": 0 }]]
+    },
+    "¿Hay datos suficientes?": {
+      "main": [
+        [{ "node": "Enviando... (typing)", "type": "main", "index": 0 }],
+        [{ "node": "Aviso sin datos", "type": "main", "index": 0 }]
+      ]
+    },
+    "Enviando... (typing)": {
+      "main": [[{ "node": "AI — Estructurar datos", "type": "main", "index": 0 }]]
+    },
+    "AI — Estructurar datos": {
+      "main": [[{ "node": "Parsear datos + preparar HTML", "type": "main", "index": 0 }]]
+    },
+    "Parsear datos + preparar HTML": {
+      "main": [[{ "node": "HTML → PDF", "type": "main", "index": 0 }]]
+    },
+    "HTML → PDF": {
+      "main": [[{ "node": "Enviar PDF por Telegram", "type": "main", "index": 0 }]]
+    },
+    "Enviar PDF por Telegram": {
+      "main": [[{ "node": "Limpiar sesión", "type": "main", "index": 0 }]]
+    },
+    "Limpiar sesión": {
+      "main": [[{ "node": "Mensaje final", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "meta": { "templateCredsSetupCompleted": false, "instanceId": "sistemake-ai" }
+}
