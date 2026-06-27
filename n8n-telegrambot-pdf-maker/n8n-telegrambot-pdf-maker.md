@@ -20,13 +20,13 @@ Session state is stored in **n8n Static Data** keyed by `chat_id`. No external d
 ## Workflow Architecture (18 nodes)
 
 ```
-Telegram Trigger → Tipo de mensaje (Switch)
-                        ├── /generar  → Cargar sesión → ¿Hay datos suficientes?
-                        │                                    ├── [yes] → typing → AI → Parse HTML → HTML→PDF → Send PDF → Limpiar sesión → Mensaje final
-                        │                                    └── [no]  → Aviso sin datos
-                        ├── photo     → Obtener archivo foto → Guardar foto en sesión → Confirmar foto recibida
-                        ├── text      → Guardar texto en sesión → Confirmar texto recibido
-                        └── other     → Mensaje bienvenida
+Telegram Trigger → Message Type (Switch)
+                        ├── /generate  → Load Session → Enough Data?
+                        │                                  ├── [yes] → typing → AI → Parse HTML → HTML→PDF → Send PDF → Clear Session → Final Message
+                        │                                  └── [no]  → No Data Warning
+                        ├── photo      → Get Photo File → Save Photo in Session → Confirm Photo Received
+                        ├── text       → Save Text in Session → Confirm Text Received
+                        └── other      → Welcome Message
 ```
 
 ### Node Reference
@@ -42,11 +42,11 @@ Telegram Trigger → Tipo de mensaje (Switch)
 | 7 | **Guardar texto en sesión** | Code | Appends the message text to `staticData.sessions[chatId].texto` |
 | 8 | **Confirmar texto recibido** | Telegram | Replies with *"✅ Information saved. Write /generar when ready"* |
 | 9 | **Cargar sesión** | Code | Reads the session for the current `chat_id` from Static Data |
-| 10 | **¿Hay datos suficientes?** | IF | Checks that the session is not empty before proceeding |
-| 11 | **Aviso sin datos** | Telegram | Warns the user if `/generar` is called with no data in session |
-| 12 | **Enviando... (typing)** | Telegram `sendChatAction` | Shows *"uploading document"* indicator while processing |
-| 13 | **AI — Estructurar datos** | Anthropic (Claude Opus 4.6) | Converts unstructured property text into a clean 22-field JSON |
-| 14 | **Parsear datos + preparar HTML** | Code | Parses AI JSON, builds the full HTML sheet, and exposes it as a binary `htmlFile` |
+| 10 | **Enough Data?** | IF | Checks that the session is not empty before proceeding |
+| 11 | **No Data Warning** | Telegram | Warns the user if `/generate` is called with no data in session |
+| 12 | **Sending... (typing)** | Telegram `sendChatAction` | Shows *"uploading document"* indicator while processing |
+| 13 | **AI — Structure Data** | Anthropic (Claude Opus 4.6) | Converts unstructured property text into a clean 22-field JSON |
+| 14 | **Parse Data + Prepare HTML** | Code | Parses AI JSON, builds the full HTML sheet, and exposes it as a binary `htmlFile` |
 | 15 | **HTML → PDF** | HTTP Request | Posts the HTML file to Gotenberg (local Docker) and receives the PDF binary |
 | 16 | **Enviar PDF por Telegram** | Telegram `sendDocument` | Sends the PDF to the user with a formatted caption |
 | 17 | **Limpiar sesión** | Code | Deletes `staticData.sessions[chatId]` so the agent can start a new sheet |
@@ -56,7 +56,7 @@ Telegram Trigger → Tipo de mensaje (Switch)
 
 ## AI Extraction — Structured Fields
 
-The **AI — Estructurar datos** node sends the session text to **Claude Opus 4.6** and extracts:
+The **AI — Structure Data** node sends the session text to **Claude Opus 4.6** and extracts:
 
 | Field | Description | Type |
 |-------|-------------|------|
@@ -156,7 +156,7 @@ The generated PDF is a single A4 page with a professional real estate layout:
 | Credential | Node | Type |
 |------------|------|------|
 | `Telegram Bot` | All Telegram nodes | Telegram API (`TELEGRAM_CRED_ID`) |
-| `Anthropic account` | AI — Estructurar datos | Anthropic API (`L6uWpsm4R1xYB6f9`) |
+| `Anthropic account` | AI — Structure Data | Anthropic API (`L6uWpsm4R1xYB6f9`) |
 
 ---
 

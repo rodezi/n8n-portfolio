@@ -1,5 +1,9 @@
 # n8n Automation Projects
 
+## Portfolio Showcase
+
+For a business-focused portfolio version in Spanish, see [PORTAFOLIO.md](PORTAFOLIO.md).
+
 A collection of production n8n workflows built to automate real estate lead management, field service operations, email outreach tracking, lead response, content engagement, inbox triage, and e-commerce recovery. Each project targets a specific business process and integrates multiple external services through a centralized architecture.
 
 ---
@@ -103,4 +107,3 @@ Intercepts Shopify `checkout/update` webhooks and runs each abandoned cart throu
 | Field Service | Zoho FSM |
 | Data storage | Google Sheets, Airtable |
 | Internal backend | Internal System API (staging) |
-

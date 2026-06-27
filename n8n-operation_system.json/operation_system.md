@@ -56,11 +56,11 @@ WhatsApp Webhook (order number)
 const abc = !Number.isNaN(Number($('Aggregate1').first().json.body[0].messages[0].text.body));
 return [{ json: { isNumber: abc } }];
 ```
-If not numeric → **`Orden Invalida`** (WhatsApp): *"El numero de orden no es valido. Inténtalo de nuevo en 1 minuto."*
+If not numeric → **`Invalid Order`** (WhatsApp): *"The work order number is not valid. Please try again in 1 minute."*
 
 ### Order Lookup
 - Authenticates with the **Internal System** and fetches the order's main participants (dispatcher, operational leader, technician).
-- **`Order Not Found`** (IF): if the order does not exist → **`Orden No Existe`** (WhatsApp): *"El numero de orden proporcionado no existe."*
+- **`Order Not Found`** (IF): if the order does not exist → **`Order Does Not Exist`** (WhatsApp): *"The provided work order number does not exist."*
 
 ### Authorization Check
 **`User Not Authorized`** (IF) — verifies the initiating phone number matches either the registered agent or responsible party (last 10 digits):
@@ -76,7 +76,7 @@ $json['Telefono Responsable'].indexOf($json['Telefono Persona Inicia Orden'].sli
 **`Template Inicio de Ejecucion`** — sends a WhatsApp template message to the *other* participant (if agent initiated → notifies responsible, and vice versa).
 
 **`Mensaje de Inicio de Orden`** (WhatsApp `sendAndWait`) — asks the initiator to confirm:
-> *"¿Es correcta la orden? Se iniciará la orden: [number]. Responde: Si / No"*
+> *"Is this the correct work order? Work order [number] will be started. Reply: Yes / No"*
 - **Timeout:** 180 minutes
 - **No** → `Falso Inicio`: *"Intente de nuevo cuando esté listo."*
 - **Yes** → proceeds to execution
@@ -94,7 +94,7 @@ $json['Telefono Responsable'].indexOf($json['Telefono Persona Inicia Orden'].sli
 
 | Field | Description |
 |---|---|
-| `Numero de orden` | Work order ID |
+| `Order Number` | Work order ID |
 | `Descripcion de Actividad` | Activity description |
 | `Validacion - Evidencia` | What the evidence must show |
 | `Tipo de Actividad` | Activity type (G = General, etc.) |
@@ -126,7 +126,7 @@ $json['Telefono Responsable'].indexOf($json['Telefono Persona Inicia Orden'].sli
 - Otherwise → technician decision prompt
 
 **`Msj Al Tecnico con descripcion de actividad`** (WhatsApp `sendAndWait`):
-> *"La actividad es de tipo: [type]. Descripcion: [desc]. Validacion: [params]. ¿Se puede proceder? Si / No"*
+> *"The activity type is: [type]. Description: [desc]. Validation: [params]. Can the work proceed? Yes / No"*
 - **Timeout:** 180 minutes
 
 **`Se puede trabajar en la actividad?`** (IF):
@@ -188,7 +188,7 @@ After successful upload:
 2. **`Upload media`** → **`Download media1`** → gets WhatsApp media ID + URL
 3. **`Frwrd Evidencia Agente`** — forwards photo directly to agent's WhatsApp number
 4. **`Msj a Agente para validar evidencia`** (WhatsApp `sendAndWait`) — asks agent:
-   > *"Valida la evidencia del técnico. Actividad: [desc]. Debe contener: [params]. ¿Es correcta? Si / No + comentario opcional"*
+   > *"Validate the technician's evidence. Activity: [desc]. It must contain: [params]. Is it correct? Yes / No + optional comment"*
    - **Timeout:** 180 minutes
 
 **`actividad valida? (Si/no)`** (IF):
